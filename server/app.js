@@ -3,7 +3,7 @@ const app = express();
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
-
+const Redis = require("ioredis");
 app.use(cors());
 
 const port = process.env.PORT || 8000;
@@ -15,6 +15,8 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+const pub = new Redis();
+const sub = new Redis();
 
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);

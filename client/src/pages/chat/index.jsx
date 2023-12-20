@@ -67,9 +67,9 @@ const ChatRoom = ({ socket }) => {
               <BsThreeDotsVertical className="h-[28px] w-[28px] cursor-pointer text-gray-500" />
             </div>
           </div>
-          <ScrollToBottom>
-            <div className="flex-1 overflow-auto bg-[#DAD3CC]">
-              <div className="py-2 px-3 min-h-full">
+          <div className="flex-1 overflow-auto bg-[#DAD3CC]">
+            <div className="py-2 px-3 min-h-[35rem]">
+              <ScrollToBottom>
                 {messages.map((message, index) => (
                   <div key={index}>
                     {message.author === username ? (
@@ -88,9 +88,9 @@ const ChatRoom = ({ socket }) => {
                     )}
                   </div>
                 ))}
-              </div>
+              </ScrollToBottom>
             </div>
-          </ScrollToBottom>
+          </div>
           <div className="bg-grey-lighter px-4 py-4 flex items-center">
             <div>
               <svg

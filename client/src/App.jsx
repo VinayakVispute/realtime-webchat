@@ -5,7 +5,7 @@ import Authentication from "./pages/auth";
 import ChatRoom from "./pages/chat";
 import NavBar from "./components/NavBar";
 import ProtectedRoute from "./components/protected";
-const socket = io.connect("https://realtime-webchat.onrender.com");
+const socket = io.connect("http://localhost:8000");
 
 const App = () => {
   return (

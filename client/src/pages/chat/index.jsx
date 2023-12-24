@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { IoSearch, IoSend } from "react-icons/io5";
 import { GrAttachment } from "react-icons/gr";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -13,6 +13,8 @@ const ChatRoom = ({ socket }) => {
   const [messages, setMessages] = useState([]);
   const { username, roomId } = location?.state;
 
+  const memoizedSocket = useMemo(() => socket, [socket]);
+
   const handleSendMessage = async () => {
     if (currentMessage.trim() !== "") {
       const messageData = {
@@ -21,26 +23,27 @@ const ChatRoom = ({ socket }) => {
         message: currentMessage,
         timeStamp: `${new Date().getHours()}:${new Date().getMinutes()}`,
       };
-      setMessages([...messages, messageData]);
-      await socket.emit("send_message", messageData);
+      await memoizedSocket.emit("send_message", messageData);
+      // setMessages((prevMessages) => [...prevMessages, messageData]);
       setCurrentMessage("");
       console.log("sent message");
     }
   };
 
+  const handleReceiveMessage = (messageData) => {
+    console.log(messageData);
+    if (messageData.roomId !== roomId) return;
+    setMessages((prevMessages) => [...prevMessages, messageData]);
+    console.log("messageData", messageData);
+  };
+
   useEffect(() => {
-    const handleReceiveMessage = (messageData) => {
-      setMessages((prevMessages) => [...prevMessages, messageData]);
-      console.log("messageData", messageData);
-      console.log("messages", messages);
-    };
-
-    socket.on("receive_message", handleReceiveMessage);
-
+    console.log("useEffect");
+    memoizedSocket.on("receive_message", handleReceiveMessage);
     return () => {
-      socket.off("receive_message", handleReceiveMessage);
+      memoizedSocket.removeListener("receive_message");
     };
-  }, [socket]);
+  }, [memoizedSocket]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -55,7 +58,7 @@ const ChatRoom = ({ socket }) => {
                 alt="Profile"
               />
               <div className="ml-4">
-                <p className="text-grey-darkest">Group Name</p>
+                <p className="text-grey-darkest">{roomId}</p>
                 <p className="text-grey-darker text-xs mt-1">
                   Andrés, Tom, Harrison, Arnold, Sylvester - Dummy Names
                 </p>

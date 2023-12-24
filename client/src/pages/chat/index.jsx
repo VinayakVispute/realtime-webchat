@@ -21,7 +21,7 @@ const ChatRoom = ({ socket }) => {
         roomId,
         author: username,
         message: currentMessage,
-        timeStamp: `${new Date().getHours()}:${new Date().getMinutes()}`,
+        timeStamp: new Date(),
       };
       await memoizedSocket.emit("send_message", messageData);
       // setMessages((prevMessages) => [...prevMessages, messageData]);
@@ -30,6 +30,19 @@ const ChatRoom = ({ socket }) => {
     }
   };
 
+  // const handleSendMessageScript = async (messageCurrent) => {
+  //   const messageData = {
+  //     roomId,
+  //     author: username,
+  //     message: messageCurrent,
+  //     timeStamp: new Date().toISOString(),
+  //   };
+  //   await memoizedSocket.emit("send_message", messageData);
+  //   // setMessages((prevMessages) => [...prevMessages, messageData]);
+  //   console.log("sendmessgescript");
+  //   setCurrentMessage("");
+  //   console.log("sent message");
+  // };
   const handleReceiveMessage = (messageData) => {
     console.log(messageData);
     if (messageData.roomId !== roomId) return;
@@ -118,7 +131,12 @@ const ChatRoom = ({ socket }) => {
             </div>
             <IoSend
               className="h-[24px] w-[24px] cursor-pointer text-gray-500"
-              onClick={handleSendMessage}
+              onClick={() => {
+                for (let i = 0; i < 100; i++) {
+                  console.log(i);
+                  handleSendMessageScript(i);
+                }
+              }}
             />
           </div>
         </div>

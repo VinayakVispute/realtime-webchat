@@ -1,5 +1,6 @@
 const { Kafka } = require("kafkajs");
 const fs = require("fs");
+const prismaClient = require("./prisma");
 const path = require("path");
 
 const kafka = new Kafka({
@@ -22,11 +23,10 @@ let producer = null;
 const createProducer = async () => {
   if (producer) return producer;
 
-  const _producer = kafka.producer();
-  await _producer.connect();
-  producer = _producer;
+  producer = kafka.producer();
+  await producer.connect();
 
-  return _producer;
+  return producer;
 };
 
 const produceMessage = async (message) => {
@@ -35,8 +35,52 @@ const produceMessage = async (message) => {
     topic: "MESSAGES",
     messages: [{ key: `message-${Date.now()}`, value: message }],
   });
-  console.log("Message Send to kafka", message);
+
+  console.log("Message sent to Kafka", message);
   return true;
 };
 
-module.exports = { kafka, produceMessage };
+const startMessageConsumer = async () => {
+  const consumer = kafka.consumer({ groupId: "default" });
+
+  await consumer.connect();
+  await consumer.subscribe({ topic: "MESSAGES", fromBeginning: true });
+
+  await consumer.run({
+    autoCommit: true,
+    eachMessage: async ({ message, pause }) => {
+      if (!message.value) return;
+
+      const messageData = JSON.parse(message.value.toString());
+      const {
+        roomId,
+        author,
+        message: messageContent,
+        timeStamp,
+      } = messageData;
+
+      console.log({ roomId, author, message: messageContent, timeStamp });
+
+      try {
+        console.log("Saving message to the database");
+        await prismaClient.message.create({
+          data: {
+            roomId,
+            author,
+            message: messageContent,
+            timestamp: timeStamp,
+          },
+        });
+      } catch (error) {
+        console.log("Error in saving message to the database", error);
+        pause();
+
+        setTimeout(() => {
+          consumer.resume({ topic: "MESSAGES" });
+        }, 1000 * 60); // 1000 means 1 sec and 60 means 1 min
+      }
+    },
+  });
+};
+
+module.exports = { kafka, produceMessage, startMessageConsumer };

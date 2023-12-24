@@ -12,7 +12,10 @@ datasource db {
 
 model Message {
   id        String   @id @default(uuid())
-  text      String
+  roomId    String
+  author    String
+  message   String
+  timestamp DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now())
 
   @@map("messages")

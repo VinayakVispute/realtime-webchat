@@ -3,9 +3,13 @@ const app = express();
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+let kafkaStarted = false;
 const Redis = require("ioredis");
-const prismaClient = require("./services/prisma");
-const { produceMessage } = require("./services/kafka");
+const {
+  produceMessage,
+  startMessageConsumer,
+  kafka,
+} = require("./services/kafka");
 
 app.use(cors());
 
@@ -44,6 +48,8 @@ sub.on("message", async (channel, message) => {
     const roomId = JSON.parse(message).roomId;
     console.log(roomId);
     io.to(roomId).emit("receive_message", JSON.parse(message));
+    await produceMessage(message);
+    console.log("Message sent to Kafka");
   }
 });
 
@@ -74,6 +80,11 @@ const start = async () => {
   try {
     server.listen(port, () => {
       console.log(`Server is running on port ${port}`);
+      if (!kafkaStarted) {
+        console.log("Starting Kafka");
+        startMessageConsumer();
+        kafkaStarted = true;
+      }
     });
   } catch (error) {
     console.log(error);

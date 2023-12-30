@@ -29,13 +29,14 @@ const pub = new Redis({
   username: "default",
   password: "AVNS_oRqFLCU85r-lAtgJCTY",
 });
-
 const sub = new Redis({
   host: "real-time-server-vinayakvispute4-1688.a.aivencloud.com",
   port: "12527",
   username: "default",
   password: "AVNS_oRqFLCU85r-lAtgJCTY",
 });
+
+let users = [];
 
 // Moved subscription and event listener setup outside the connection event
 sub.subscribe("MESSAGES", (err, count) => {
@@ -54,11 +55,27 @@ sub.on("message", async (channel, message) => {
 });
 
 io.on("connection", async (socket) => {
-  console.log(`User Connected: ${socket.id}`);
+  // socket.on("join_server", async (username) => {
+  //   const user = { id: socket.id, username };
+  //   users.push(user);
+  //   console.log(`User Connected: ${user.id} && ${user.username}`);
+  // });
 
-  socket.on("join_room", (data) => {
-    socket.join(data);
-    console.log(`User with ID: ${socket.id} joined room: ${data}`);
+  socket.on("join_room", ({ username, roomId }) => {
+    const user = { id: socket.id, username };
+
+    // Ensure users[roomId] is an array, creating an empty array if it doesn't exist
+    users[roomId] = users[roomId] || [];
+
+    // Add the user to the array
+    users[roomId].push(user);
+
+    console.log(`User Connected: ${user.id} && ${user.username}`);
+
+    socket.join(roomId);
+    console.log(`User with ID: ${socket.id} joined room: ${roomId}`);
+
+    io.to(roomId).emit("user_joined_room", users[roomId]);
   });
 
   socket.on("send_message", async (data) => {
@@ -73,6 +90,20 @@ io.on("connection", async (socket) => {
 
   socket.on("disconnect", () => {
     console.log("user disconnected", socket.id);
+    for (const roomId in users) {
+      if (users[roomId]) {
+        let flag = false;
+        users[roomId] = users[roomId].filter((user) => {
+          if (user.id === socket.id) {
+            flag = true;
+          }
+          return user.id !== socket.id;
+        });
+        if (flag) {
+          io.to(roomId).emit("user_joined_room", users[roomId]);
+        }
+      }
+    }
   });
 });
 

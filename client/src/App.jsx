@@ -16,7 +16,7 @@ const App = () => {
           Path="/"
           element={
             <ProtectedRoute>
-              <NavBar />
+              <NavBar socket={socket} />
               <Home socket={socket} />
             </ProtectedRoute>
           }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { IoSearch, IoSend } from "react-icons/io5";
 import { GrAttachment } from "react-icons/gr";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -12,10 +12,13 @@ const ChatRoom = ({ socket }) => {
   const [currentMessage, setCurrentMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const { username, roomId } = location?.state;
+  const [users, setUsers] = useState([]);
 
   const memoizedSocket = useMemo(() => socket, [socket]);
 
   const handleSendMessage = async () => {
+    console.log(socket);
+    await socket.emit("check");
     if (currentMessage.trim() !== "") {
       const messageData = {
         roomId,
@@ -30,19 +33,6 @@ const ChatRoom = ({ socket }) => {
     }
   };
 
-  // const handleSendMessageScript = async (messageCurrent) => {
-  //   const messageData = {
-  //     roomId,
-  //     author: username,
-  //     message: messageCurrent,
-  //     timeStamp: new Date().toISOString(),
-  //   };
-  //   await memoizedSocket.emit("send_message", messageData);
-  //   // setMessages((prevMessages) => [...prevMessages, messageData]);
-  //   console.log("sendmessgescript");
-  //   setCurrentMessage("");
-  //   console.log("sent message");
-  // };
   const handleReceiveMessage = (messageData) => {
     console.log(messageData);
     if (messageData.roomId !== roomId) return;
@@ -53,8 +43,14 @@ const ChatRoom = ({ socket }) => {
   useEffect(() => {
     console.log("useEffect");
     memoizedSocket.on("receive_message", handleReceiveMessage);
+    memoizedSocket.on("user_joined_room", (user) => {
+      console.log("user_joined_room", user);
+      setUsers(user);
+      console.log(users.current);
+    });
     return () => {
       memoizedSocket.removeListener("receive_message");
+      memoizedSocket.removeListener("user_joined_room");
     };
   }, [memoizedSocket]);
 
@@ -62,7 +58,7 @@ const ChatRoom = ({ socket }) => {
     <div className="flex flex-col h-screen">
       <ChatNavBar />
       <div className="flex border border-grey rounded shadow-lg flex-1">
-        <div className="min-w-full border flex flex-col">
+        <div className="min-w-full border flex flex-col flex-1">
           <div className="py-2 px-3 bg-grey-lighter flex justify-between items-center">
             <div className="flex items-center">
               <img
@@ -73,7 +69,7 @@ const ChatRoom = ({ socket }) => {
               <div className="ml-4">
                 <p className="text-grey-darkest">{roomId}</p>
                 <p className="text-grey-darker text-xs mt-1">
-                  Andrés, Tom, Harrison, Arnold, Sylvester - Dummy Names
+                  {users && users.map((user) => user.username).join(", ")}
                 </p>
               </div>
             </div>
@@ -83,31 +79,31 @@ const ChatRoom = ({ socket }) => {
               <BsThreeDotsVertical className="h-[28px] w-[28px] cursor-pointer text-gray-500" />
             </div>
           </div>
-          <div className="flex-1 overflow-auto bg-[#DAD3CC]">
-            <div className="py-2 px-3 min-h-[35rem]">
-              <ScrollToBottom>
-                {messages.map((message, index) => (
-                  <div key={index}>
-                    {message.author === username ? (
-                      <SendMessage
+
+          <ScrollToBottom className="flex-1  bg-[#DAD3CC] overflow-y-auto max-h-[39rem]">
+            <div className="py-2 px-3">
+              {messages.map((message, index) => (
+                <div key={index}>
+                  {message.author === username ? (
+                    <SendMessage
+                      message={message.message}
+                      timestamp={message.timeStamp}
+                    />
+                  ) : (
+                    <>
+                      <ReceivedMessage
                         message={message.message}
+                        sender={message.author}
                         timestamp={message.timeStamp}
                       />
-                    ) : (
-                      <>
-                        <ReceivedMessage
-                          message={message.message}
-                          sender={message.author}
-                          timestamp={message.timeStamp}
-                        />
-                      </>
-                    )}
-                  </div>
-                ))}
-              </ScrollToBottom>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
-          </div>
-          <div className="bg-grey-lighter px-4 py-4 flex items-center">
+          </ScrollToBottom>
+
+          <footer className="bg-grey-lighter px-4 py-4 flex items-center">
             <div>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -132,13 +128,10 @@ const ChatRoom = ({ socket }) => {
             <IoSend
               className="h-[24px] w-[24px] cursor-pointer text-gray-500"
               onClick={() => {
-                for (let i = 0; i < 100; i++) {
-                  console.log(i);
-                  handleSendMessageScript(i);
-                }
+                handleSendMessage();
               }}
             />
-          </div>
+          </footer>
         </div>
       </div>
     </div>

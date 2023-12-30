@@ -1,8 +1,13 @@
+import { useAuth0 } from "@auth0/auth0-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Login = ({ socket }) => {
-  const [username, setUsername] = useState("");
+  const { user } = useAuth0();
+  const [username, setUsername] = useState(
+    user?.nickname || user?.username || "Guest User"
+  );
+
   const [roomId, setRoomId] = useState("");
   const navigate = useNavigate();
 
@@ -13,7 +18,7 @@ const Login = ({ socket }) => {
       return;
     }
     try {
-      socket.emit("join_room", roomId);
+      socket.emit("join_room", { username, roomId });
       // navigate("/chat");
       navigate("/chat", { state: { username, roomId } });
     } catch (error) {
@@ -35,8 +40,8 @@ const Login = ({ socket }) => {
             type="text"
             id="username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-500"
+            disabled
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-500 border-0"
           />
         </div>
 

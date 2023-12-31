@@ -18,7 +18,7 @@ const Login = ({ socket }) => {
       return;
     }
     try {
-      socket.emit("join_room", { username, roomId });
+      socket.emit("join_room", { username, roomId, id: user.sub });
       // navigate("/chat");
       navigate("/chat", { state: { username, roomId } });
     } catch (error) {

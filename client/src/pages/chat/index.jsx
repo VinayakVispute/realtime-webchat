@@ -43,16 +43,15 @@ const ChatRoom = ({ socket }) => {
   useEffect(() => {
     console.log("useEffect");
     memoizedSocket.on("receive_message", handleReceiveMessage);
-    memoizedSocket.on("user_joined_room", (user) => {
-      console.log("user_joined_room", user);
+    memoizedSocket.on("user_join", (user) => {
+      console.log("user_join", user);
       setUsers(user);
-      console.log(users.current);
     });
     return () => {
       memoizedSocket.removeListener("receive_message");
-      memoizedSocket.removeListener("user_joined_room");
+      memoizedSocket.removeListener("user_join");
     };
-  }, [memoizedSocket]);
+  }, [memoizedSocket, users]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -69,7 +68,7 @@ const ChatRoom = ({ socket }) => {
               <div className="ml-4">
                 <p className="text-grey-darkest">{roomId}</p>
                 <p className="text-grey-darker text-xs mt-1">
-                  {users && users.map((user) => user.username).join(", ")}
+                  {users && users.map((user) => user.userName).join(", ")}
                 </p>
               </div>
             </div>

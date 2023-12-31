@@ -1,6 +1,6 @@
 const { Kafka } = require("kafkajs");
 const fs = require("fs");
-const prismaClient = require("./prisma");
+const { prismaClient } = require("./prisma");
 const path = require("path");
 
 const kafka = new Kafka({

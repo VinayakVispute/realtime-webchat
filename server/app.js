@@ -10,6 +10,12 @@ const {
   startMessageConsumer,
   kafka,
 } = require("./services/kafka");
+const {
+  findOrCreateUser,
+  addUserToRoom,
+  usersRemoveFromRoom,
+} = require("./services/prisma");
+const { constants } = require("buffer");
 
 app.use(cors());
 
@@ -43,6 +49,10 @@ sub.subscribe("MESSAGES", (err, count) => {
   console.log("Subscribed to MESSAGES channel");
 });
 
+sub.subscribe("USERS", (err, count) => {
+  console.log("Subscribed to USERS channel");
+});
+
 sub.on("message", async (channel, message) => {
   if (channel === "MESSAGES") {
     console.log("Message received from Redis", message);
@@ -55,55 +65,42 @@ sub.on("message", async (channel, message) => {
 });
 
 io.on("connection", async (socket) => {
-  // socket.on("join_server", async (username) => {
-  //   const user = { id: socket.id, username };
-  //   users.push(user);
-  //   console.log(`User Connected: ${user.id} && ${user.username}`);
-  // });
-
-  socket.on("join_room", ({ username, roomId }) => {
-    const user = { id: socket.id, username };
-
-    // Ensure users[roomId] is an array, creating an empty array if it doesn't exist
-    users[roomId] = users[roomId] || [];
-
-    // Add the user to the array
-    users[roomId].push(user);
-
-    console.log(`User Connected: ${user.id} && ${user.username}`);
-
+  socket.on("join_room", async ({ username, roomId, id }) => {
+    const userResponse = await findOrCreateUser(username, id);
+    console.log("userResponse", userResponse);
+    const user = {
+      socketId: socket.id,
+      username: userResponse.name,
+      id: userResponse.id,
+    };
+    console.log("user", user);
+    const usersInRoom = await addUserToRoom(roomId, user.username);
+    console.log("usersInRoom", usersInRoom);
+    console.log(`User Connected: ${user.socketId} && ${user.username}`);
     socket.join(roomId);
     console.log(`User with ID: ${socket.id} joined room: ${roomId}`);
+    socket.to(roomId).emit("user_join", usersInRoom);
+    socket.emit("user_join", usersInRoom);
+    socket.on("send_message", async (data) => {
+      console.log("Message received from client", data);
+      console.log(data.roomId, data);
 
-    io.to(roomId).emit("user_joined_room", users[roomId]);
-  });
-
-  socket.on("send_message", async (data) => {
-    console.log("Message received from client", data);
-    console.log(data.roomId, data);
-
-    console.log("Message sent to Redis Waiting for response");
-    const response = await pub.publish("MESSAGES", JSON.stringify(data), () => {
-      console.log("Message sent to Redis");
-    });
-  });
-
-  socket.on("disconnect", () => {
-    console.log("user disconnected", socket.id);
-    for (const roomId in users) {
-      if (users[roomId]) {
-        let flag = false;
-        users[roomId] = users[roomId].filter((user) => {
-          if (user.id === socket.id) {
-            flag = true;
-          }
-          return user.id !== socket.id;
-        });
-        if (flag) {
-          io.to(roomId).emit("user_joined_room", users[roomId]);
+      console.log("Message sent to Redis Waiting for response");
+      const response = await pub.publish(
+        "MESSAGES",
+        JSON.stringify(data),
+        () => {
+          console.log("Message sent to Redis");
         }
-      }
-    }
+      );
+    });
+
+    socket.on("disconnect", async () => {
+      const usersInRoom = await usersRemoveFromRoom(roomId, userResponse.id);
+      console.log("usersInRoomAfter Removal", usersInRoom);
+      socket.to(roomId).emit("user_join", usersInRoom);
+      console.log("user disconnected", socket.id);
+    });
   });
 });
 

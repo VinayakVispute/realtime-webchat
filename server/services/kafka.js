@@ -36,7 +36,6 @@ const produceMessage = async (message) => {
     messages: [{ key: `message-${Date.now()}`, value: message }],
   });
 
-  console.log("Message sent to Kafka", message);
   return true;
 };
 
@@ -59,10 +58,7 @@ const startMessageConsumer = async () => {
         timeStamp,
       } = messageData;
 
-      console.log({ roomId, author, message: messageContent, timeStamp });
-
       try {
-        console.log("Saving message to the database");
         await prismaClient.message.create({
           data: {
             roomId,
@@ -72,7 +68,7 @@ const startMessageConsumer = async () => {
           },
         });
       } catch (error) {
-        console.log("Error in saving message to the database", error);
+        console.log("Error while saving message to database:", error);
         pause();
 
         setTimeout(() => {

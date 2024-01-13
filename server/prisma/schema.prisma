@@ -12,9 +12,10 @@ datasource db {
 
 model Message {
   id        String   @id @default(uuid())
-  roomId    String
+  isRoom    Boolean  @default(true)
   author    String
   message   String
+  receiver  String
   timestamp DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now())
 
@@ -34,4 +35,17 @@ model OnlineUser {
   User     User   @relation(fields: [userName], references: [name])
   userName String
   roomId   String
+  room     Room   @relation(fields: [roomId], references: [roomId])
+  socketId String
+
+  @@map("online_users")
+}
+
+model Room {
+  id     String       @id @default(uuid())
+  roomId String       @unique
+  name   String
+  users  OnlineUser[]
+
+  @@map("rooms")
 }

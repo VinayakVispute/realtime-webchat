@@ -1,8 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Login from "./components/Join";
 import Create from "./components/Create";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Home = ({ socket }) => {
+  const user = useAuth0();
+  const userName = user?.nickname || user?.username || "Guest User";
+  useEffect(() => {
+    socket.emit("join_server", { userName });
+
+    return () => {
+      socket.removeListener("join_server");
+    };
+  }, [user, userName]);
+
   const [showRegisterPage, setShowRegisterPage] = useState(false);
 
   const changeMode = () => {

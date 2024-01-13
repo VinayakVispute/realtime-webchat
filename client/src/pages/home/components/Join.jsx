@@ -18,11 +18,21 @@ const Login = ({ socket }) => {
       return;
     }
     try {
-      socket.emit("join_room", { username, roomId, id: user.sub });
-      // navigate("/chat");
-      navigate("/chat", { state: { username, roomId } });
+      socket.emit(
+        "join_room",
+        { username, roomId, id: user.sub },
+        (message) => {
+          const messagefromDatabaseForRoom = message;
+
+          // Navigate only after the callback is executed
+          navigate("/chat", {
+            state: { username, roomId, messagefromDatabaseForRoom },
+          });
+        }
+      );
     } catch (error) {
-      console.log(error);
+      // Handle errors
+      console.error("Error while joining room:", error);
     }
   };
 

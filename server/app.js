@@ -36,16 +36,16 @@ const io = new Server(server, {
 });
 
 const pub = new Redis({
-  host: "real-time-server-vinayakvispute4-1688.a.aivencloud.com",
-  port: "12527",
-  username: "default",
-  password: "AVNS_oRqFLCU85r-lAtgJCTY",
+  host: process.env.REDIS_AIVEN_SERVER_HOST || "",
+  port: process.env.REDIS_AIVEN_SERVER_PORT || "",
+  username: process.env.REIDS_AIVEN_SERVER_USERNAME || "",
+  password: process.env.REIDS_AIVEN_SERVER_PASSWORD || "",
 });
 const sub = new Redis({
-  host: "real-time-server-vinayakvispute4-1688.a.aivencloud.com",
-  port: "12527",
-  username: "default",
-  password: "AVNS_oRqFLCU85r-lAtgJCTY",
+  host: process.env.REDIS_AIVEN_SERVER_HOST || "",
+  port: process.env.REDIS_AIVEN_SERVER_PORT || "",
+  username: process.env.REIDS_AIVEN_SERVER_USERNAME || "",
+  password: process.env.REIDS_AIVEN_SERVER_PASSWORD || "",
 });
 
 // Moved subscription and event listener setup outside the connection event

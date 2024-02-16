@@ -8,34 +8,35 @@ import SendMessage from "./components/SendMessage";
 import ChatNavBar from "../../components/ChatNavBar";
 import ScrollToBottom from "react-scroll-to-bottom";
 
-const ChatRoom = ({ socket, messagesData }) => {
+const ChatRoom = ({ socket }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { username, roomId, messagefromDatabaseForRoom } = location?.state;
+
+  const { userName, roomId, alreadyUsers } = location?.state;
+
   const [currentMessage, setCurrentMessage] = useState("");
-  const [messages, setMessages] = useState(
-    { [roomId]: messagefromDatabaseForRoom } || {}
-  );
-  const [users, setUsers] = useState([]);
+  const [messages, setMessages] = useState({});
+  const [users, setUsers] = useState(alreadyUsers || []);
   const [roomData, setRoomData] = useState({
     roomName: roomId,
     roomType: "room",
     id: roomId,
   });
   const [showDropdown, setShowDropdown] = useState(false);
+
   const memoizedSocket = useMemo(() => socket, [socket]);
-  console.log("socket", socket);
+
   const removeUserFromRoom = async () => {
-    await memoizedSocket.emit("leave_room", roomId);
-    return navigate("/");
+    // Add your logic for leaving a room
   };
+
   const handleSendMessage = async () => {
     const disconnectedAlert =
       "You have been disconnected. Please remove this room and join again";
 
     if (
       !memoizedSocket.connected ||
-      !username ||
+      !userName ||
       !roomId ||
       !roomData.roomType
     ) {
@@ -43,9 +44,10 @@ const ChatRoom = ({ socket, messagesData }) => {
     }
 
     const messageData = {
-      author: username,
+      author: userName,
       message: currentMessage,
       timeStamp: new Date().toISOString(),
+      room: roomId,
     };
 
     if (roomData.roomType === "personal") {
@@ -58,10 +60,7 @@ const ChatRoom = ({ socket, messagesData }) => {
       return alert(disconnectedAlert);
     }
     console.log("messageData before emiting", messageData);
-    await memoizedSocket.emit("send_message", {
-      messageData,
-      senderData: roomData.id,
-    });
+    memoizedSocket.emit("send_message", messageData);
 
     setCurrentMessage("");
 
@@ -82,36 +81,6 @@ const ChatRoom = ({ socket, messagesData }) => {
       }
     }
   };
-  // const handleReceiveMessage = (messageData) => {
-  //   console.log(messageData);
-  //   // if (messageData.roomId !== roomId) return;
-  //   setMessages((prevMessages) => [...prevMessages, messageData]);
-  //   console.log("messageData", messageData);
-  // };
-
-  // const handleReceiveMessage = (messageData) => {
-  //   // Assuming you have a state variable like roomsMessages which is an object with roomIds as keys and message arrays as values
-  //   console.log("Message Received", messageData);
-  //   setMessages((prevMessages) => {
-  //     const { receiver } = messageData;
-
-  //     // Check if array for the room already exists
-  //     if (prevMessages.hasOwnProperty(receiver)) {
-  //       // Room array exists, push the message
-  //       return {
-  //         ...prevMessages,
-  //         [receiver]: [...prevMessages[receiver], messageData],
-  //       };
-  //     } else {
-  //       // Room array doesn't exist, create a new array and push the message
-  //       return {
-  //         ...prevMessages,
-  //         [receiver]: [messageData],
-  //       };
-  //     }
-  //   });
-  // };
-
   const handleReceiveMessage = (messageData) => {
     console.log("Message Received", messageData);
     setMessages((prevMessages) => {
@@ -159,26 +128,7 @@ const ChatRoom = ({ socket, messagesData }) => {
 
   const handleUserClick = (user) => {
     if (roomData.roomName === user.userName) return;
-
-    if (user.userName === username) return;
-    if (!messages.hasOwnProperty(user.userName)) {
-      console.log("get_messages_from_database");
-      socket.emit(
-        "get_messages_from_database",
-        {
-          roomName: user.userName,
-          userName: username,
-        },
-        (messagesforUserFromDatabase) => {
-          setMessages((prevMessages) => {
-            return {
-              ...prevMessages,
-              [user.userName]: messagesforUserFromDatabase,
-            };
-          });
-        }
-      );
-    }
+    if (user.userName === userName) return;
     setRoomData({
       roomName: user.userName,
       roomType: "personal",
@@ -197,17 +147,29 @@ const ChatRoom = ({ socket, messagesData }) => {
 
   useEffect(() => {
     memoizedSocket.on("receive_message", handleReceiveMessage);
-    memoizedSocket.on("user_join", (user) => {
-      setUsers(user);
-    });
+
     memoizedSocket.on("disconnecting", (reason) => {
       alert(`${reason} been disconnected`);
     });
     return () => {
-      memoizedSocket.removeListener("receive_message");
-      memoizedSocket.removeListener("user_join");
+      memoizedSocket.off("receive_message");
+      memoizedSocket.off("user_join");
     };
   }, [memoizedSocket, users]);
+
+  useEffect(() => {
+    // socket.on("get-users", (users) => {
+    //   setUsers(users);
+    // });
+    socket.on("user-joined", (user) => {
+      setUsers((prevUsers) => [...prevUsers, user]);
+    });
+
+    return () => {
+      // socket.off("get-users");
+      socket.off("user-joined");
+    };
+  }, [socket, users]);
 
   return (
     <>
@@ -285,7 +247,7 @@ const ChatRoom = ({ socket, messagesData }) => {
                   <li className="ml-6">
                     <div
                       className={`flex items-center p-2 text-gray-900 rounded-lg group ${
-                        user.userName === username
+                        user.userName === userName
                           ? "cursor-default bg-gray-300"
                           : "cursor-pointer hover:bg-gray-100"
                       }`}
@@ -417,7 +379,7 @@ const ChatRoom = ({ socket, messagesData }) => {
                       messages[roomData.roomName].map((message, index) => (
                         <>
                           <div key={index}>
-                            {message.author === username ? (
+                            {message.author === userName ? (
                               <SendMessage
                                 message={message.message}
                                 timestamp={message.timeStamp}

@@ -2,38 +2,25 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const Login = ({ socket }) => {
-  const { user } = useAuth0();
-  const [username, setUsername] = useState(
-    user?.nickname || user?.username || "Guest User"
-  );
-
+const Login = ({ socket, userName }) => {
   const [roomId, setRoomId] = useState("");
   const navigate = useNavigate();
 
   const handleJoin = () => {
     // Add your logic for joining a room
-    if (username === "" || roomId === "") {
+    if (userName === "" || roomId === "") {
+      console.log("Please enter username and room id");
       alert("Please enter username and room id");
       return;
     }
-    try {
-      socket.emit(
-        "join_room",
-        { username, roomId, id: user.sub },
-        (message) => {
-          const messagefromDatabaseForRoom = message;
-
-          // Navigate only after the callback is executed
-          navigate("/chat", {
-            state: { username, roomId, messagefromDatabaseForRoom },
-          });
-        }
-      );
-    } catch (error) {
-      // Handle errors
-      console.error("Error while joining room:", error);
-    }
+    console.log("Joining room:", roomId, userName);
+    socket.emit("join_room", { roomId, userName }, (cb) => {
+      console.log("Joining Room", cb);
+      // Navigate only after the callback is executed
+      navigate("/chat", {
+        state: { userName, roomId, alreadyUsers: cb },
+      });
+    });
   };
 
   return (
@@ -49,7 +36,7 @@ const Login = ({ socket }) => {
           <input
             type="text"
             id="username"
-            value={username}
+            value={userName || "Guest User"}
             disabled
             className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-500 border-0"
           />

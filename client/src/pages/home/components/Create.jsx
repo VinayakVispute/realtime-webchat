@@ -1,7 +1,6 @@
 import { useState } from "react";
 
-const CreatePage = () => {
-  const [username, setUsername] = useState("");
+const CreatePage = ({ userName }) => {
   const [roomName, setRoomName] = useState("");
   const [roomId, setRoomId] = useState("");
 
@@ -22,8 +21,8 @@ const CreatePage = () => {
           <input
             type="text"
             id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            disabled
+            value={userName || "Guest User"}
             className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-500"
           />
         </div>

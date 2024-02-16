@@ -4,20 +4,21 @@ import Create from "./components/Create";
 import { useAuth0 } from "@auth0/auth0-react";
 
 const Home = ({ socket }) => {
-  const user = useAuth0();
+  const { user } = useAuth0();
   const userName = user?.nickname || user?.username || "Guest User";
-  useEffect(() => {
-    socket.emit("join_server", { userName });
 
-    return () => {
-      socket.removeListener("join_server");
-    };
-  }, [user, userName]);
+  // useEffect(() => {
+  //   socket.emit("join_server", { userName });
+
+  //   return () => {
+  //     socket.removeListener("join_server");
+  //   };
+  // }, [socket, userName]);
 
   const [showRegisterPage, setShowRegisterPage] = useState(false);
 
   const changeMode = () => {
-    setShowRegisterPage(!showRegisterPage);
+    setShowRegisterPage((prev) => !prev);
   };
 
   return (
@@ -57,9 +58,9 @@ const Home = ({ socket }) => {
         </div>
 
         {showRegisterPage ? (
-          <Create socket={socket} />
+          <Create socket={socket} userName={userName} />
         ) : (
-          <Login socket={socket} />
+          <Login socket={socket} userName={userName} />
         )}
       </div>
     </div>

@@ -10,20 +10,28 @@ const socket = io.connect("http://localhost:8000");
 
 const App = () => {
   useEffect(() => {
-    socket.on("connect", () => {
+    // Event listener for successful connection
+    const handleConnect = () => {
       console.log("Connected to server");
-    });
-    socket.on("socket_error", (data) => {
+    };
+
+    // Event listener for socket errors
+    const handleSocketError = (data) => {
       console.error(`Error during ${data.type}: ${data.error}`);
       alert(data.error);
-    });
-
-    return () => {
-      socket.removeListener("connect");
-      socket.removeListener("socket_error");
-      socket.disconnect();
     };
-  });
+
+    // Add event listeners
+    socket.on("connect", handleConnect);
+    socket.on("socket_error", handleSocketError);
+
+    // Clean up by removing event listeners when the component unmounts
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("socket_error", handleSocketError);
+    };
+  }, [socket]); // Include 'socket' in the dependency array if it is used inside the effect
+
   return (
     <div className="flex min-h-screen w-screen flex-col bg-richblack-900 font-inter">
       <Routes>

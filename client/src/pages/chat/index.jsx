@@ -147,6 +147,20 @@ const ChatRoom = ({ socket }) => {
   };
 
   useEffect(() => {
+    // Emit the "checkUserInRoom" event to the server
+    socket.emit("checkUserInRoom", { roomId }, ({ success }) => {
+      if (success) {
+        // User is in the room, you can load the component or perform other actions
+        console.log("User is in the room");
+      } else {
+        // User is not in the room, show an alert and navigate to "/"
+        alert("User is not in the room");
+        navigate("/");
+      }
+    });
+  }, [socket, roomId, navigate]);
+
+  useEffect(() => {
     memoizedSocket.on("receive_message", handleReceiveMessage);
 
     memoizedSocket.on("disconnecting", (reason) => {

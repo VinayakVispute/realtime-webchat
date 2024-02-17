@@ -92,6 +92,15 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("checkUserInRoom", (data, cb) => {
+    const { roomId } = data;
+    const success = checkUserInRoom(socket.adapter.rooms, roomId, socket.id);
+
+    cb({
+      success,
+    });
+  });
+
   socket.on("disconnecting", () => {
     for (const roomId in rooms) {
       // Remove user from the room

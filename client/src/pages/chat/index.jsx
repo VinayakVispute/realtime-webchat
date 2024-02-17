@@ -11,16 +11,17 @@ import ScrollToBottom from "react-scroll-to-bottom";
 const ChatRoom = ({ socket }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const { userName, roomId, alreadyUsers } = location?.state;
-
+  // author: author, roomId, onlineUsers: onlineUsers
+  const { author, room, onlineUsers, databaseMessages } = location?.state;
+  const userName = author?.userName;
   const [currentMessage, setCurrentMessage] = useState("");
-  const [messages, setMessages] = useState({});
-  const [users, setUsers] = useState(alreadyUsers || []);
+  const [messages, setMessages] = useState(databaseMessages || []);
+  const [users, setUsers] = useState(onlineUsers || []);
   const [roomData, setRoomData] = useState({
-    roomName: roomId,
+    roomName: room.roomName,
     roomType: "room",
-    id: roomId,
+    _id: room._id,
+    id: room.roomId,
   });
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -35,96 +36,57 @@ const ChatRoom = ({ socket }) => {
     const disconnectedAlert =
       "You have been disconnected. Please remove this room and join again";
 
-    if (
-      !memoizedSocket.connected ||
-      !userName ||
-      !roomId ||
-      !roomData.roomType
-    ) {
+    if (!memoizedSocket.connected || !userName || !room || !roomData.roomType) {
       return alert(disconnectedAlert);
     }
-
+    // Important
     const messageData = {
-      author: userName,
+      author: author,
       message: currentMessage,
       timeStamp: new Date().toISOString(),
-      room: roomId,
+      room: room,
     };
 
     if (roomData.roomType === "personal") {
       messageData.isRoom = false;
-      messageData.receiver = roomData.roomName;
+      messageData.receiver = {
+        userName: roomData.roomName,
+        _id: roomData._id,
+        socketId: roomData.id,
+      };
     } else if (roomData.roomType === "room") {
       messageData.isRoom = true;
-      messageData.receiver = roomId;
+      messageData.receiver = null;
     } else {
       return alert(disconnectedAlert);
     }
     console.log("messageData before emiting", messageData);
+
     memoizedSocket.emit("send_message", messageData);
 
+    setMessages((prevMessages) => [...prevMessages, messageData]);
     setCurrentMessage("");
 
-    if (!messageData.isRoom) {
-      const key = messageData.receiver;
-      if (messages.hasOwnProperty(key)) {
-        setMessages((prevMessages) => ({
-          ...prevMessages,
-          [key]: [...prevMessages[key], messageData],
-        }));
-      } else {
-        setMessages((prevMessages) => ({
-          ...prevMessages,
-          [key]: [messageData],
-        }));
+    // if (!messageData.isRoom) {
+    //   const key = messageData.receiver;
+    //   if (messages.hasOwnProperty(key)) {
+    //     setMessages((prevMessages) => ({
+    //       ...prevMessages,
+    //       [key]: [...prevMessages[key], messageData],
+    //     }));
+    //   } else {
+    //     setMessages((prevMessages) => ({
+    //       ...prevMessages,
+    //       [key]: [messageData],
+    //     }));
 
-        console.log("sent message");
-      }
-    }
+    //     console.log("sent message");
+    //   }
+    // }
   };
   const handleReceiveMessage = (messageData) => {
     console.log("Message Received", messageData);
-    setMessages((prevMessages) => {
-      if (messageData.isRoom) {
-        // It's a room, check for roomId
-        const { receiver } = messageData;
-
-        // Check if the room array already exists
-        if (prevMessages.hasOwnProperty(receiver)) {
-          // Room array exists, push the message
-          return {
-            ...prevMessages,
-            [receiver]: [...prevMessages[receiver], messageData],
-          };
-        } else {
-          // Room array doesn't exist, create a new array
-          return {
-            ...prevMessages,
-            [receiver]: [messageData],
-          };
-        }
-      } else {
-        // Not a room, treat it as a message between sender and receiver
-        const { author, receiver } = messageData;
-
-        // Update sender's array
-        const updatedAuthorMessages = prevMessages.hasOwnProperty(author)
-          ? { [author]: [...prevMessages[author], messageData] }
-          : { [author]: [messageData] };
-
-        // Update receiver's array
-        const updatedReceiverMessages = prevMessages.hasOwnProperty(receiver)
-          ? { [receiver]: [...prevMessages[receiver], messageData] }
-          : { [receiver]: [messageData] };
-
-        // Return the combined updated state
-        return {
-          ...prevMessages,
-          ...updatedAuthorMessages,
-          ...updatedReceiverMessages,
-        };
-      }
-    });
+    setMessages((prevMessages) => [...prevMessages, messageData]);
   };
 
   const handleUserClick = (user) => {
@@ -133,22 +95,24 @@ const ChatRoom = ({ socket }) => {
     setRoomData({
       roomName: user.userName,
       roomType: "personal",
+      _id: user._id,
       id: user.socketId,
     });
   };
 
   const handleRoomClick = () => {
-    if (roomData.roomName === roomId) return;
+    if (roomData.id === room.roomId) return;
     setRoomData({
-      roomName: roomId,
+      roomName: room.roomName,
       roomType: "room",
-      id: roomId,
+      id: room.roomId,
+      _id: room._id,
     });
   };
 
   useEffect(() => {
     // Emit the "checkUserInRoom" event to the server
-    socket.emit("checkUserInRoom", { roomId }, ({ success }) => {
+    socket.emit("checkUserInRoom", { roomId: room.roomId }, ({ success }) => {
       if (success) {
         // User is in the room, you can load the component or perform other actions
         console.log("User is in the room");
@@ -158,7 +122,7 @@ const ChatRoom = ({ socket }) => {
         navigate("/");
       }
     });
-  }, [socket, roomId, navigate]);
+  }, [socket, room, navigate]);
 
   useEffect(() => {
     memoizedSocket.on("receive_message", handleReceiveMessage);
@@ -239,7 +203,7 @@ const ChatRoom = ({ socket }) => {
               <li>
                 <div
                   className="flex items-center p-2 text-gray-900 rounded-lg   group cursor-pointer "
-                  onClick={() => handleRoomClick(roomId)}
+                  onClick={() => handleRoomClick()}
                 >
                   <svg
                     className="w-5 h-5 text-gray-500 transition duration-75   "
@@ -251,7 +215,7 @@ const ChatRoom = ({ socket }) => {
                     <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z" />
                     <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z" />
                   </svg>
-                  <span className="ms-3">Room : {roomId}</span>
+                  <span className="ms-3">Room : {room.roomName}</span>
                 </div>
               </li>
               <li className="border-b-4">
@@ -403,35 +367,58 @@ const ChatRoom = ({ socket }) => {
                     </div>
                   </div>
                 </div>
-                <ScrollToBottom className="flex-1  bg-[#DAD3CC] overscroll-y-scroll max-h-[28rem]">
+                <ScrollToBottom className="flex-1 bg-[#DAD3CC] overscroll-y-scroll max-h-[28rem]">
                   <div className="py-2 px-3">
-                    {messages[roomData.roomName] &&
-                    messages[roomData.roomName].length > 0 ? (
-                      messages[roomData.roomName].map((message, index) => (
-                        <>
-                          <div key={index}>
-                            {message.author === userName ? (
-                              <SendMessage
-                                message={message.message}
-                                timestamp={message.timeStamp}
-                              />
-                            ) : (
-                              <>
-                                <ReceivedMessage
+                    {messages &&
+                      messages.map((message, index) => (
+                        <div key={index}>
+                          {roomData.roomType === "room" ? (
+                            // If roomType is "room", map all messages where isRoom is true
+                            message.isRoom ? (
+                              message?.author?.userName === userName ? (
+                                <SendMessage
                                   message={message.message}
-                                  sender={message.author}
                                   timestamp={message.timeStamp}
                                 />
+                              ) : (
+                                <ReceivedMessage
+                                  message={message.message}
+                                  sender={message.author.userName}
+                                  timestamp={message.timeStamp}
+                                />
+                              )
+                            ) : null
+                          ) : (
+                            // If roomType is not "room", map messages where isRoom is false and author or receiver userName is equal to roomData.roomName
+                            !message.isRoom &&
+                            (message.author.userName === roomData.roomName ||
+                              message.receiver.userName ===
+                                roomData.roomName) && (
+                              <>
+                                {message?.author?.userName === userName ? (
+                                  <SendMessage
+                                    message={message.message}
+                                    timestamp={message.timeStamp}
+                                  />
+                                ) : (
+                                  <ReceivedMessage
+                                    message={message.message}
+                                    sender={message.author.userName}
+                                    timestamp={message.timeStamp}
+                                  />
+                                )}
                               </>
-                            )}
-                          </div>
-                        </>
-                      ))
-                    ) : (
-                      <div>No messages for this room</div>
-                    )}
+                            )
+                          )}
+                        </div>
+                      ))}
+                    {!messages ||
+                      (messages.length === 0 && (
+                        <div>No messages for this room</div>
+                      ))}
                   </div>
                 </ScrollToBottom>
+
                 <footer className=" bg-grey-lighter pb-16 flex items-center mr-4 ">
                   <div className="flex-1 mx-4 min-h-10">
                     <input

@@ -16,9 +16,16 @@ const Login = ({ socket, userName }) => {
     console.log("Joining room:", roomId, userName);
     socket.emit("join_room", { roomId, userName }, (cb) => {
       console.log("Joining Room", cb);
+      const { onlineUsers, author, room, messages } = cb;
       // Navigate only after the callback is executed
+      console.log("Navigating to chat room", cb);
       navigate("/chat", {
-        state: { userName, roomId, alreadyUsers: cb },
+        state: {
+          author: author,
+          room,
+          onlineUsers: onlineUsers,
+          databaseMessages: messages,
+        },
       });
     });
   };

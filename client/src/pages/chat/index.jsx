@@ -27,7 +27,8 @@ const ChatRoom = ({ socket }) => {
   const memoizedSocket = useMemo(() => socket, [socket]);
 
   const removeUserFromRoom = async () => {
-    // Add your logic for leaving a room
+    socket.emit("offline");
+    return navigate("/");
   };
 
   const handleSendMessage = async () => {
@@ -158,18 +159,34 @@ const ChatRoom = ({ socket }) => {
   }, [memoizedSocket, users]);
 
   useEffect(() => {
-    // socket.on("get-users", (users) => {
-    //   setUsers(users);
-    // });
+    socket.on("user-disconnected", ({ userName, users }) => {
+      setUsers(users);
+      alert(`${userName} has been disconnected`);
+    });
+    socket.on("user-offline", ({ userName, users }) => {
+      setUsers(users);
+      alert(`${userName} has gone offline`);
+    });
     socket.on("user-joined", (user) => {
       setUsers((prevUsers) => [...prevUsers, user]);
     });
 
     return () => {
-      // socket.off("get-users");
+      socket.off("user-disconnected");
+      socket.off("user-offline");
       socket.off("user-joined");
     };
   }, [socket, users]);
+
+  useEffect(() => {
+    socket.on("user-disconnected", (users) => {
+      setUsers(users);
+    });
+
+    return () => {
+      socket.off("user-disconnected");
+    };
+  }, [socket]);
 
   return (
     <>

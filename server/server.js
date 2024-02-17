@@ -6,6 +6,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const Redis = require("ioredis");
 const findSocketIdByUsername = require("./util/findSocketIdByUsername");
+const checkUserInRoom = require("./util/checkUserInRoom");
 require("dotenv").config();
 
 // Enable Cross-Origin Resource Sharing (CORS)
@@ -51,6 +52,8 @@ io.on("connection", (socket) => {
   socket.on("join_room", (data, cb) => {
     // Check if the room exists, if not, create it
     const { roomId, userName } = data;
+    socket.userName = userName;
+
     if (!rooms[roomId]) {
       rooms[roomId] = [];
     }
@@ -71,7 +74,6 @@ io.on("connection", (socket) => {
 
     // Join the room
     cb(rooms[roomId]);
-    console.log(socket.adapter.rooms);
   });
 
   //send message to the room
@@ -90,8 +92,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Handle user disconnection
-  socket.on("disconnect", () => {
+  socket.on("disconnecting", () => {
     for (const roomId in rooms) {
       // Remove user from the room
       rooms[roomId] = rooms[roomId].filter(
@@ -99,11 +100,30 @@ io.on("connection", (socket) => {
       );
 
       // Notify other users in the room about the disconnected user
-      io.to(roomId).emit("user-disconnected", { userId: socket.id });
+      // TODO: Send Alert to the room
 
-      // Send updated user list to all users in the room
-      io.to(roomId).emit("get-users", rooms[roomId]);
+      const roomDetails = socket.adapter.rooms;
+      console.log(
+        "disconnected roomDetails",
+        roomDetails,
+        roomId,
+        socket.id,
+        checkUserInRoom(roomDetails, roomId, socket.id)
+      );
+      if (checkUserInRoom(roomDetails, roomId, socket.id)) {
+        socket.leave(roomId);
+        // Notify other users in the room about the offline user
+        io.to(roomId).emit("user-disconnected", {
+          userName: socket.userName,
+          users: rooms[roomId],
+        });
+      }
     }
+  });
+
+  // Handle user disconnection
+  socket.on("disconnect", () => {
+    console.log(`User ${socket.userName} disconnected`);
   });
 
   // Handle user going offline
@@ -113,12 +133,19 @@ io.on("connection", (socket) => {
       rooms[roomId] = rooms[roomId].filter(
         (user) => user.socketId !== socket.id
       );
-
-      // Notify other users in the room about the offline user
-      io.to(roomId).emit("user-offline", { userId: socket.id });
-
-      // Send updated user list to all users in the room
-      io.to(roomId).emit("get-users", rooms[roomId]);
+      const roomDetails = socket.adapter.rooms;
+      console.log(
+        "roomDetails",
+        checkUserInRoom(roomDetails, roomId, socket.id)
+      );
+      if (checkUserInRoom(roomDetails, roomId, socket.id)) {
+        socket.leave(roomId);
+        // Notify other users in the room about the offline user
+        io.to(roomId).emit("user-offline", {
+          userName: socket.userName,
+          users: rooms[roomId],
+        });
+      }
     }
   });
 });

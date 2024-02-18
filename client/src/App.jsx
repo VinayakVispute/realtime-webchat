@@ -6,7 +6,12 @@ import ChatRoom from "./pages/chat";
 import NavBar from "./components/NavBar";
 import ProtectedRoute from "./components/protected";
 import { useEffect } from "react";
+
 const socket = io.connect("http://localhost:8000");
+
+// const socket = require("socket.io-client")("https://example.com", {
+// parser: require("socket.io-msgpack-parser")
+// });
 
 const App = () => {
   useEffect(() => {

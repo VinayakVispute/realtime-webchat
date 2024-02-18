@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { IoSearch, IoSend } from "react-icons/io5";
-import { GrAttachment } from "react-icons/gr";
+import { GrAttachment, GrClose } from "react-icons/gr";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useLocation, useNavigate } from "react-router-dom";
 import ReceivedMessage from "./components/ReceivedMessage";
 import SendMessage from "./components/SendMessage";
 import ChatNavBar from "../../components/ChatNavBar";
 import ScrollToBottom from "react-scroll-to-bottom";
-
+import axios from "axios";
 const ChatRoom = ({ socket }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,12 +24,44 @@ const ChatRoom = ({ socket }) => {
     id: room.roomId,
   });
   const [showDropdown, setShowDropdown] = useState(false);
-
+  const [fileInputVisible, setFileInputVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
   const memoizedSocket = useMemo(() => socket, [socket]);
 
   const removeUserFromRoom = async () => {
     socket.emit("offline");
     return navigate("/");
+  };
+
+  const handleAttachmentClick = () => {
+    setFileInputVisible(true);
+  };
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+
+    if (file) {
+      setSelectedFile(file);
+
+      // Generate a preview for image files (you can adjust based on your file types)
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null); // Reset preview for non-image files
+      }
+    }
+
+    // Reset file input visibility
+    setFileInputVisible(false);
+  };
+
+  const closeFilePreview = () => {
+    setFilePreview(null);
+    setSelectedFile(null);
   };
 
   const handleSendMessage = async () => {
@@ -39,53 +71,53 @@ const ChatRoom = ({ socket }) => {
     if (!memoizedSocket.connected || !userName || !room || !roomData.roomType) {
       return alert(disconnectedAlert);
     }
-    // Important
-    const messageData = {
-      author: author,
-      message: currentMessage,
-      timeStamp: new Date().toISOString(),
-      room: room,
-    };
 
-    if (roomData.roomType === "personal") {
-      messageData.isRoom = false;
-      messageData.receiver = {
-        userName: roomData.roomName,
-        _id: roomData._id,
-        socketId: roomData.id,
-      };
-
-      memoizedSocket.emit("send_message", messageData);
-      setMessages((prevMessages) => [...prevMessages, messageData]);
-    } else if (roomData.roomType === "room") {
-      messageData.isRoom = true;
-      messageData.receiver = null;
-
-      memoizedSocket.emit("send_message", messageData);
-    } else {
-      return alert(disconnectedAlert);
+    const isFile = !!selectedFile;
+    let messageContent = currentMessage;
+    if (isFile) {
+      console.log("selectedFile", selectedFile);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      const response = await axios.post(
+        "http://localhost:8000/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log("response", response);
+      messageContent = response.data.data;
     }
-    console.log("messageData before emiting", messageData);
 
+    // const messageContent = isFile ? filePreview : currentMessage;
+
+    const messageData = {
+      author,
+      isFile,
+      message: messageContent,
+      timeStamp: new Date().toISOString(),
+      room,
+      isRoom: roomData.roomType === "personal" ? false : true,
+      receiver:
+        roomData.roomType === "personal"
+          ? {
+              userName: roomData.roomName,
+              _id: roomData._id,
+              socketId: roomData.id,
+            }
+          : null,
+    };
+    console.log("messageData", messageData);
+    // Remove 'file' property from messageData before setting messages
+
+    memoizedSocket.emit("send_message", messageData);
+    setMessages((prevMessages) => [...prevMessages, messageData]);
+    closeFilePreview();
     setCurrentMessage("");
-
-    // if (!messageData.isRoom) {
-    //   const key = messageData.receiver;
-    //   if (messages.hasOwnProperty(key)) {
-    //     setMessages((prevMessages) => ({
-    //       ...prevMessages,
-    //       [key]: [...prevMessages[key], messageData],
-    //     }));
-    //   } else {
-    //     setMessages((prevMessages) => ({
-    //       ...prevMessages,
-    //       [key]: [messageData],
-    //     }));
-
-    //     console.log("sent message");
-    //   }
-    // }
   };
+
   const handleReceiveMessage = (messageData) => {
     console.log("Message Received", messageData);
     setMessages((prevMessages) => [...prevMessages, messageData]);
@@ -231,7 +263,6 @@ const ChatRoom = ({ socket }) => {
                   )}
                 </div>
               </li>
-              {console.log("users", users)}
               {users &&
                 users?.map((user) => (
                   <li className="ml-6">
@@ -301,7 +332,19 @@ const ChatRoom = ({ socket }) => {
                   </div>
                   <div className="flex gap-6">
                     <IoSearch className="h-[28px] w-[28px] cursor-pointer text-gray-500" />
-                    <GrAttachment className="h-[28px] w-[28px] cursor-pointer text-gray-500" />
+                    <GrAttachment
+                      className="h-[28px] w-[28px] cursor-pointer text-gray-500"
+                      onClick={handleAttachmentClick}
+                    />
+                    {fileInputVisible && (
+                      <input
+                        type="file"
+                        onChange={handleFileInputChange}
+                        style={{ display: "none" }}
+                        ref={(input) => input && input.click()}
+                      />
+                    )}
+
                     <div className="relative inline-block text-left">
                       <BsThreeDotsVertical
                         className="h-[28px] w-[28px] cursor-pointer text-gray-500"
@@ -374,9 +417,11 @@ const ChatRoom = ({ socket }) => {
                                 <SendMessage
                                   message={message.message}
                                   timestamp={message.timeStamp}
+                                  isFile={message.isFile}
                                 />
                               ) : (
                                 <ReceivedMessage
+                                  isFile={message.isFile}
                                   message={message.message}
                                   sender={message.author.userName}
                                   timestamp={message.timeStamp}
@@ -392,11 +437,13 @@ const ChatRoom = ({ socket }) => {
                               <>
                                 {message?.author?.userName === userName ? (
                                   <SendMessage
+                                    isFile={message.isFile}
                                     message={message.message}
                                     timestamp={message.timeStamp}
                                   />
                                 ) : (
                                   <ReceivedMessage
+                                    isFile={message.isFile}
                                     message={message.message}
                                     sender={message.author.userName}
                                     timestamp={message.timeStamp}
@@ -412,6 +459,19 @@ const ChatRoom = ({ socket }) => {
                         <div>No messages for this room</div>
                       ))}
                   </div>
+                  {filePreview && (
+                    <div className="mb-2 py-2 px-3 relative">
+                      <GrClose
+                        className="h-6 w-6 cursor-pointer absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                        onClick={closeFilePreview}
+                      />
+                      <img
+                        src={filePreview}
+                        alt="File Preview"
+                        className="h-48 w-auto rounded-md shadow-lg"
+                      />
+                    </div>
+                  )}
                 </ScrollToBottom>
 
                 <footer className=" bg-grey-lighter pb-16 flex items-center mr-4 ">

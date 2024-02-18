@@ -7,7 +7,8 @@ const createMessage = async (
   timeStamp,
   roomId,
   isRoom,
-  receiverId
+  receiverId,
+  isFile
 ) => {
   try {
     const newMessage = new Message({
@@ -17,6 +18,7 @@ const createMessage = async (
       room: roomId,
       message: message,
       timestamp: timeStamp,
+      isFile: isFile,
     });
 
     const savedMessage = await newMessage.save();

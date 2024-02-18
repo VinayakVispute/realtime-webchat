@@ -3,23 +3,37 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const http = require("http");
-const bodyParser = require("body-parser");
+const fileUpload = require("express-fileupload");
 const { Server } = require("socket.io");
 const Redis = require("ioredis");
 const findSocketIdByUsername = require("./util/findSocketIdByUsername");
 const checkUserInRoom = require("./util/checkUserInRoom");
 const connectDB = require("./services/database");
+
+const {
+  cloudinaryConnect,
+  isFileTypeSupported,
+  uploadFileToCloudinary,
+} = require("./services/cloudinary");
 const { addUserToRoom } = require("./controllers/userController");
+
 require("dotenv").config();
 // Enable Cross-Origin Resource Sharing (CORS)
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
+  })
+);
 // Routes Import
 const roomRoutes = require("./routes/roomRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { createMessage } = require("./controllers/messageController");
 const findRoomForUser = require("./util/findRoomForUser");
 const { removeUserFromRoom } = require("./controllers/RoomController");
+const { fileUploadCloudnary } = require("./controllers/fileUploadController");
 // Set up server configuration
 const port = process.env.PORT || 8000;
 const server = http.createServer(app);
@@ -56,6 +70,7 @@ app.get("/", (req, res) => {
 
 app.use("/rooms", roomRoutes);
 app.use("/messages", messageRoutes);
+app.use("/upload", fileUploadCloudnary);
 
 sub.subscribe("USERSCHANNEL", (errUsers, countUsers) => {
   if (errUsers) {
@@ -104,8 +119,9 @@ sub.on("message", (channel, message) => {
     console.log("except", currentSocketId);
     io.to(to).except(currentSocketId).emit(event, data);
   } else if (channel === "MESSAGES") {
-    const { sender, messageContent } = JSON.parse(message);
-    io.to(sender).emit("receive_message", messageContent);
+    const { sender, messageContent, socketId } = JSON.parse(message);
+    console.log("expect", socketId);
+    io.to(sender).except(socketId).emit("receive_message", messageContent);
   }
 });
 
@@ -159,28 +175,39 @@ io.on("connection", (socket) => {
   //send message to the room
 
   socket.on("send_message", async (data) => {
-    const { isRoom, room, author, message, receiver, timestamp } = data;
+    const { isRoom, room, author, message, receiver, timestamp, isFile } = data;
     const authorId = author?._id;
     const receiverId = receiver?._id;
     const roomId = room?._id;
+    console.log("isFile", isFile);
     const messageSaved = await createMessage(
       authorId,
       message,
       timestamp,
       roomId,
       isRoom,
-      receiverId
+      receiverId,
+      isFile
     );
+    console.log("messageSaved", messageSaved);
     if (isRoom) {
       await pub.publish(
         "MESSAGES",
-        JSON.stringify({ sender: room.roomId, messageContent: data })
+        JSON.stringify({
+          sender: room.roomId,
+          messageContent: data,
+          socketId: socket.id,
+        })
       );
       // socket.to(room.roomId).emit("receive_message", data);
     } else {
       await pub.publish(
         "MESSAGES",
-        JSON.stringify({ sender: receiver.socketId, messageContent: data })
+        JSON.stringify({
+          sender: receiver.socketId,
+          messageContent: data,
+          socketId: socket.id,
+        })
       );
       // socket.to(receiver.socketId).emit("receive_message", data);
     }
@@ -285,6 +312,8 @@ const start = () => {
   try {
     // Start the server and listen on the specified port
     server.listen(port, async () => {
+      cloudinaryConnect();
+
       await connectDB(process.env.MONGODB_URL);
       console.log(`Server is running on port ${port}`);
     });

@@ -20,6 +20,10 @@ const messageSchema = new mongoose.Schema({
     ref: "Room",
     required: [true, "Room is required"],
   },
+  isFile: {
+    type: Boolean,
+    default: false,
+  },
   message: {
     type: String,
     required: [true, "Message is required"],

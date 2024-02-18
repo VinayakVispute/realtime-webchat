@@ -28,7 +28,7 @@ const roomRoutes = require("./routes/roomRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { createMessage } = require("./controllers/messageController");
 const findRoomForUser = require("./util/findRoomForUser");
-const { removeUserFromRoom } = require("./controllers/RoomController");
+const { removeUserFromRoom } = require("./controllers/roomController");
 const { fileUploadCloudnary } = require("./controllers/fileUploadController");
 // Set up server configuration
 const port = process.env.PORT || 8000;

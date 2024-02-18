@@ -13,6 +13,7 @@ import UploadSpinner from "./components/UploadSpinner";
 const ChatRoom = ({ socket }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  console.log(import.meta.env.VITE_BACKEND_URL);
   // author: author, roomId, onlineUsers: onlineUsers
   const { author, room, onlineUsers, databaseMessages } = location?.state;
   const userName = author?.userName;
@@ -65,6 +66,7 @@ const ChatRoom = ({ socket }) => {
   const closeFilePreview = () => {
     setFilePreview(null);
     setSelectedFile(null);
+    setFileInputVisible(false);
   };
 
   const handleSendMessage = async () => {
@@ -84,7 +86,7 @@ const ChatRoom = ({ socket }) => {
         const formData = new FormData();
         formData.append("file", selectedFile);
         const response = await axios.post(
-          "http://localhost:8000/upload",
+          `${import.meta.env.VITE_BACKEND_URL}/upload`, ////BACKEND_URL (import.meta.env.VITE_SOME_KEY)
           formData,
           {
             headers: {

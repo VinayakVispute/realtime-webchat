@@ -15,7 +15,11 @@ const { addUserToRoom } = require("./controllers/userController");
 
 require("dotenv").config();
 // Enable Cross-Origin Resource Sharing (CORS)
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://dev-collab-hub.vercel.app"],
+  })
+);
 app.use(express.json());
 app.use(
   fileUpload({
@@ -37,7 +41,7 @@ const server = http.createServer(app);
 // Set up Socket.IO with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", process.env.CLIENT_URL],
+    origin: ["http://localhost:3000", "https://dev-collab-hub.vercel.app"],
     methods: ["GET", "POST"],
   },
 });

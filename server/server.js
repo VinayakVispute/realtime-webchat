@@ -57,16 +57,41 @@ app.get("/", (req, res) => {
 app.use("/rooms", roomRoutes);
 app.use("/messages", messageRoutes);
 
-sub.subscribe("USERSCHANNEL", (err, count) => {
-  if (err) {
-    console.log("Error in subscribing to USERSCHANNEL");
+sub.subscribe("USERSCHANNEL", (errUsers, countUsers) => {
+  if (errUsers) {
+    console.log("Error in subscribing to USERSCHANNEL:", errUsers);
+  } else {
+    console.log("Subscribed to USERSCHANNEL");
   }
-  console.log("Subscribed to USERSCHANNEL");
+});
+
+sub.subscribe("MESSAGES", (errMessages, countMessages) => {
+  if (errMessages) {
+    console.log("Error in subscribing to MESSAGES:", errMessages);
+  } else {
+    console.log("Subscribed to MESSAGES");
+  }
 });
 
 sub.on("message", (channel, message) => {
+  // if (isRoom) {
+  //   await pub.publish(
+  //     "MESSAGES",
+  //     JSON.stringify({ sender: room.roomId, messageContent: data })
+  //   );
+  //   // socket.to(room.roomId).emit("receive_message", data);
+  // } else {
+  //   await pub.publish(
+  //     "MESSAGES",
+  //     JSON.stringify({ sender: receiver.socketId, messageContent: data })
+  //   );
+  //   // socket.to(receiver.socketId).emit("receive_message", data);
+  // }
   if (channel === "USERSCHANNEL") {
     console.log("Received message from USERSCHANNEL: ", message);
+  } else if (channel === "MESSAGES") {
+    const { sender, messageContent } = JSON.parse(message);
+    io.to(sender).emit("receive_message", messageContent);
   }
 });
 
@@ -132,9 +157,17 @@ io.on("connection", (socket) => {
       receiverId
     );
     if (isRoom) {
-      socket.to(room.roomId).emit("receive_message", data);
+      await pub.publish(
+        "MESSAGES",
+        JSON.stringify({ sender: room.roomId, messageContent: data })
+      );
+      // socket.to(room.roomId).emit("receive_message", data);
     } else {
-      socket.to(receiver.socketId).emit("receive_message", data);
+      await pub.publish(
+        "MESSAGES",
+        JSON.stringify({ sender: receiver.socketId, messageContent: data })
+      );
+      // socket.to(receiver.socketId).emit("receive_message", data);
     }
   });
 

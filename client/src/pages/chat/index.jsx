@@ -54,17 +54,19 @@ const ChatRoom = ({ socket }) => {
         _id: roomData._id,
         socketId: roomData.id,
       };
+
+      memoizedSocket.emit("send_message", messageData);
+      setMessages((prevMessages) => [...prevMessages, messageData]);
     } else if (roomData.roomType === "room") {
       messageData.isRoom = true;
       messageData.receiver = null;
+
+      memoizedSocket.emit("send_message", messageData);
     } else {
       return alert(disconnectedAlert);
     }
     console.log("messageData before emiting", messageData);
 
-    memoizedSocket.emit("send_message", messageData);
-
-    setMessages((prevMessages) => [...prevMessages, messageData]);
     setCurrentMessage("");
 
     // if (!messageData.isRoom) {

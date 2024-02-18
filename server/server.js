@@ -10,11 +10,7 @@ const findSocketIdByUsername = require("./util/findSocketIdByUsername");
 const checkUserInRoom = require("./util/checkUserInRoom");
 const connectDB = require("./services/database");
 
-const {
-  cloudinaryConnect,
-  isFileTypeSupported,
-  uploadFileToCloudinary,
-} = require("./services/cloudinary");
+const { cloudinaryConnect } = require("./services/cloudinary");
 const { addUserToRoom } = require("./controllers/userController");
 
 require("dotenv").config();

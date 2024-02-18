@@ -8,6 +8,8 @@ import SendMessage from "./components/SendMessage";
 import ChatNavBar from "../../components/ChatNavBar";
 import ScrollToBottom from "react-scroll-to-bottom";
 import axios from "axios";
+import Spinner from "../../components/Spinner";
+import UploadSpinner from "./components/UploadSpinner";
 const ChatRoom = ({ socket }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +29,7 @@ const ChatRoom = ({ socket }) => {
   const [fileInputVisible, setFileInputVisible] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const memoizedSocket = useMemo(() => socket, [socket]);
 
   const removeUserFromRoom = async () => {
@@ -76,19 +79,28 @@ const ChatRoom = ({ socket }) => {
     let messageContent = currentMessage;
     if (isFile) {
       console.log("selectedFile", selectedFile);
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      const response = await axios.post(
-        "http://localhost:8000/upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      console.log("response", response);
-      messageContent = response.data.data;
+      try {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        const response = await axios.post(
+          "http://localhost:8000/upload",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        console.log("response", response);
+        messageContent = response.data.data;
+      } catch (error) {
+        alert("Error uploading file");
+        console.error("Error uploading file", error);
+        closeFilePreview();
+      } finally {
+        setUploading(false);
+      }
     }
 
     // const messageContent = isFile ? filePreview : currentMessage;
@@ -343,6 +355,14 @@ const ChatRoom = ({ socket }) => {
                         style={{ display: "none" }}
                         ref={(input) => input && input.click()}
                       />
+                    )}
+                    {uploading && (
+                      <div
+                        className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-gray-900 bg-opacity-50"
+                        style={{ zIndex: 1000 }}
+                      >
+                        <UploadSpinner />
+                      </div>
                     )}
 
                     <div className="relative inline-block text-left">

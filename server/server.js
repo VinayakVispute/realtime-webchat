@@ -17,7 +17,7 @@ require("dotenv").config();
 // Enable Cross-Origin Resource Sharing (CORS)
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://dev-collab-hub.vercel.app"],
+    origin: "https://dev-collab-hub.vercel.app",
   })
 );
 app.use(express.json());
@@ -41,7 +41,7 @@ const server = http.createServer(app);
 // Set up Socket.IO with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "https://dev-collab-hub.vercel.app"],
+    origin: "https://dev-collab-hub.vercel.app",
     methods: ["GET", "POST"],
   },
 });

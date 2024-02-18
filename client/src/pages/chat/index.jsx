@@ -140,10 +140,12 @@ const ChatRoom = ({ socket }) => {
 
   useEffect(() => {
     socket.on("user-disconnected", ({ userName, users }) => {
+      console.log("user-disconnected", userName, users);
       setUsers(users);
       alert(`${userName} has been disconnected`);
     });
     socket.on("user-offline", ({ userName, users }) => {
+      console.log("user-disconnected", userName, users);
       setUsers(users);
       alert(`${userName} has gone offline`);
     });
@@ -157,16 +159,6 @@ const ChatRoom = ({ socket }) => {
       socket.off("user-joined");
     };
   }, [socket, users]);
-
-  useEffect(() => {
-    socket.on("user-disconnected", (users) => {
-      setUsers(users);
-    });
-
-    return () => {
-      socket.off("user-disconnected");
-    };
-  }, [socket]);
 
   return (
     <>
@@ -239,8 +231,9 @@ const ChatRoom = ({ socket }) => {
                   )}
                 </div>
               </li>
+              {console.log("users", users)}
               {users &&
-                users.map((user) => (
+                users?.map((user) => (
                   <li className="ml-6">
                     <div
                       className={`flex items-center p-2 text-gray-900 rounded-lg group ${
@@ -301,9 +294,9 @@ const ChatRoom = ({ socket }) => {
                     />
                     <div className="ml-4">
                       <p className="text-grey-darkest">{roomData.roomName}</p>
-                      <p className="text-grey-darker text-xs mt-1">
+                      {/* <p className="text-grey-darker text-xs mt-1">
                         {users && users.map((user) => user.userName).join(", ")}
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                   <div className="flex gap-6">

@@ -88,15 +88,26 @@ sub.on("message", (channel, message) => {
   //   // socket.to(receiver.socketId).emit("receive_message", data);
   // }
   if (channel === "USERSCHANNEL") {
-    console.log("Received message from USERSCHANNEL: ", message);
+    // pub.publish(
+    //   "USERSCHANNEL",
+    //   JSON.stringify({
+    //     to: roomIdForUser,
+    //     event: "user-disconnected",
+    //     data: {
+    //       userName: socket.userName,
+    //       users: updatedUsers.data.roomData,
+    //     },
+    //   })
+    // );
+
+    const { to, event, data, currentSocketId } = JSON.parse(message);
+    console.log("except", currentSocketId);
+    io.to(to).except(currentSocketId).emit(event, data);
   } else if (channel === "MESSAGES") {
     const { sender, messageContent } = JSON.parse(message);
     io.to(sender).emit("receive_message", messageContent);
   }
 });
-
-// Initialize an object to store room information
-const rooms = {};
 
 io.on("connection", (socket) => {
   // Handle new user joining a room
@@ -105,30 +116,34 @@ io.on("connection", (socket) => {
     const { roomId, userName } = data;
     socket.userName = userName;
     console.log(`User ${userName} & ${socket.id} joined room ${roomId}`);
-    // if (!rooms[roomId]) {
-    //   rooms[roomId] = [];
-    // }
 
-    // // Check if the user is not already in the room
-    // if (!rooms[roomId].some((user) => user.userName === userName)) {
-    //   // Add user to the room
-    //   rooms[roomId].push({ userName, socketId: socket.id });
-    //   console.log(`User ${userName} joined room ${roomId}`);
-    // }
     const response = await addUserToRoom(roomId, userName, socket.id);
-    // Send all active users in the room to the new user
-    // console.log("response", response);
     socket.join(roomId);
 
     const author = response.data.author;
-    // Notify all users in the room about the new user
+
     socket.mongoDbId = author._id;
-    io.to(roomId).emit("user-joined", {
-      userName: author.userName,
-      socketId: author.socketId,
-    });
-    // Join the room
-    // cb(rooms[roomId]);
+
+    // Notify all users in the room about the new user
+
+    pub.publish(
+      "USERSCHANNEL",
+      JSON.stringify({
+        to: roomId,
+        event: "user-joined",
+        currentSocketId: socket.id,
+        data: {
+          userName: author.userName,
+          socketId: author.socketId,
+        },
+      })
+    );
+
+    // io.to(roomId).emit("user-joined", {
+    //   userName: author.userName,
+    //   socketId: author.socketId,
+    // });
+
     cb({
       room: {
         _id: response.data.room._id,
@@ -182,7 +197,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnecting", async () => {
     const roomIdForUser = findRoomForUser(socket.adapter.rooms, socket.id);
-    console.log("roomIdForUser", roomIdForUser);
+
     if (roomIdForUser) {
       socket.leave(roomIdForUser);
 
@@ -192,19 +207,29 @@ io.on("connection", (socket) => {
       );
       if (updatedUsers.success) {
         // Notify other users in the room about the offline user
-        io.to(roomIdForUser).emit("user-disconnected", {
-          userName: socket.userName,
-          users: updatedUsers.data.roomData,
-        });
+
+        pub.publish(
+          "USERSCHANNEL",
+          JSON.stringify({
+            to: roomIdForUser,
+            event: "user-disconnected",
+            currentSocketId: socket.id,
+            data: {
+              userName: socket.userName,
+              users: updatedUsers.data.roomData,
+            },
+          })
+        );
+
+        // io.to(roomIdForUser).emit("user-disconnected", {
+        //   userName: socket.userName,
+        //   users: updatedUsers.data.roomData,
+        // });
 
         console.log(
           `User ${socket.userName} disconnecting from room ${roomIdForUser}`
         );
       }
-      // io.to(roomIdForUser).emit("user-disconnected", {
-      //   userName: socket.userName,
-      //   users: rooms[roomId],
-      // });
     }
   });
 
@@ -216,7 +241,7 @@ io.on("connection", (socket) => {
   // Handle user going offline
   socket.on("offline", async () => {
     const roomIdForUser = findRoomForUser(socket.adapter.rooms, socket.id);
-    console.log("roomIdForUser", roomIdForUser);
+
     if (roomIdForUser) {
       socket.leave(roomIdForUser);
 
@@ -225,12 +250,27 @@ io.on("connection", (socket) => {
         socket.mongoDbId
       );
       console.log("updatedUsers", updatedUsers);
+
       if (updatedUsers.success) {
         // Notify other users in the room about the offline user
-        io.to(roomIdForUser).emit("user-disconnected", {
-          userName: socket.userName,
-          users: updatedUsers.data.roomData,
-        });
+
+        pub.publish(
+          "USERSCHANNEL",
+          JSON.stringify({
+            to: roomIdForUser,
+            event: "user-disconnected",
+            currentSocketId: socket.id,
+            data: {
+              userName: socket.userName,
+              users: updatedUsers.data.roomData,
+            },
+          })
+        );
+
+        // io.to(roomIdForUser).emit("user-disconnected", {
+        //   userName: socket.userName,
+        //   users: updatedUsers.data.roomData,
+        // });
 
         console.log(
           `User ${socket.userName} disconnecting from room ${roomIdForUser}`

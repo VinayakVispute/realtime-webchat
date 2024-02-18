@@ -36,7 +36,7 @@ const removeUserFromRoom = async (roomId, mongoDbId) => {
         message: "Room not found",
       };
     }
-    console.log("room", room);
+
     if (
       room.onlineUsers.some(
         (user) => user._id.toString() === mongoDbId.toString()

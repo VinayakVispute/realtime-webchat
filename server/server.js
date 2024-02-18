@@ -15,11 +15,6 @@ const { addUserToRoom } = require("./controllers/userController");
 
 require("dotenv").config();
 // Enable Cross-Origin Resource Sharing (CORS)
-app.use(
-  cors({
-    origin: "https://dev-collab-hub.vercel.app",
-  })
-);
 app.use(express.json());
 app.use(
   fileUpload({
@@ -46,6 +41,7 @@ const io = new Server(server, {
   },
 });
 
+app.use(cors());
 // Use the routes
 
 // Create Redis publisher and subscriber instances for real-time communication

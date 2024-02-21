@@ -1,15 +1,43 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { IoSearch, IoSend } from "react-icons/io5";
-import { GrAttachment, GrClose } from "react-icons/gr";
+import { GrClose } from "react-icons/gr";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  AdvancedImage,
+  responsive,
+  placeholder,
+  accessibility,
+  lazyload,
+} from "@cloudinary/react";
+import { Cloudinary } from "@cloudinary/url-gen";
+import CloudinaryUploadWidget from "../../utils/CloudinaryUploadWidget";
 import ReceivedMessage from "./components/ReceivedMessage";
 import SendMessage from "./components/SendMessage";
 import ChatNavBar from "../../components/ChatNavBar";
 import ScrollToBottom from "react-scroll-to-bottom";
-import axios from "axios";
-import Spinner from "../../components/Spinner";
-import UploadSpinner from "./components/UploadSpinner";
+import { fill } from "@cloudinary/url-gen/actions/resize";
+import {
+  blackwhite,
+  sepia,
+  grayscale,
+} from "@cloudinary/url-gen/actions/effect";
+
+import { source } from "@cloudinary/url-gen/actions/overlay";
+import { byAngle } from "@cloudinary/url-gen/actions/rotate";
+import { byRadius } from "@cloudinary/url-gen/actions/roundCorners";
+import { backgroundRemoval } from "@cloudinary/url-gen/actions/effect";
+
+// Import required values.
+import { text } from "@cloudinary/url-gen/qualifiers/source";
+import { Position } from "@cloudinary/url-gen/qualifiers/position";
+import { TextStyle } from "@cloudinary/url-gen/qualifiers/textStyle";
+import { compass } from "@cloudinary/url-gen/qualifiers/gravity";
+import { blur } from "@cloudinary/url-gen/actions/effect";
+import { format, quality } from "@cloudinary/url-gen/actions/delivery";
+import { png } from "@cloudinary/url-gen/qualifiers/format";
+import { autoEco } from "@cloudinary/url-gen/qualifiers/quality";
+
 const ChatRoom = ({ socket }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,11 +54,69 @@ const ChatRoom = ({ socket }) => {
     _id: room._id,
     id: room.roomId,
   });
+  const [radius, setRadius] = useState(0);
+  const [angle, setAngle] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [fileInputVisible, setFileInputVisible] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [filePreview, setFilePreview] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [publicId, setPublicId] = useState(null);
+  const [cloudName] = useState(import.meta.env.VITE_CLOUD_NAME);
+  const [uploadPreset] = useState(import.meta.env.VITE_UPLOAD_PRESET);
+  const [overlayText, setOverlayText] = useState("");
+  const [font, setFont] = useState("arial");
+  const [fontSize, setFontSize] = useState(80);
+  const [fontWeight, setFontWeight] = useState("");
+  const [fontStyle, setFontStyle] = useState("");
+  const [textDecoration, setTextDecoration] = useState("");
+  const [textAlignment, setTextAlignment] = useState("center");
+  const [textColor, setTextColor] = useState("#000000");
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [effect, setEffect] = useState("");
+
+  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+  const [backgroundRemovalFlag, setBackgroundRemovalFlag] = useState(false);
+
+  const handleBackgroundRemovalChange = (event) => {
+    setBackgroundRemovalFlag(event.target.value === "true");
+  };
+
+  const handleBackgroundColorChange = (event) => {
+    setBackgroundColor(event.target.value);
+  };
+  const handleRadiusChange = (event) => {
+    setRadius(Number(event.target.value));
+  };
+
+  const handleAngleChange = (event) => {
+    setAngle(Number(event.target.value));
+  };
+
+  const deleteImage = () => {
+    if (publicId) {
+      // Call the Cloudinary API or your preferred method to delete the image
+      console.log(`Deleting image with publicId: ${publicId}`);
+      // Example using Cloudinary API
+      // cloudinary.uploader.destroy(publicId, (result) => {
+      //   console.log(result);
+      // });
+    }
+    closeFilePreview();
+  };
+
+  
+  const [uwConfig] = useState({
+    cloudName,
+    uploadPreset,
+    cropping: true, //add a cropping step
+    multiple: false, //restrict upload to a single file
+    folder: "RealTimeChatApp", //upload files to the specified folder
+  });
+
+  const cld = new Cloudinary({
+    cloud: {
+      cloudName,
+    },
+  });
+
   const memoizedSocket = useMemo(() => socket, [socket]);
 
   const removeUserFromRoom = async () => {
@@ -38,35 +124,31 @@ const ChatRoom = ({ socket }) => {
     return navigate("/");
   };
 
-  const handleAttachmentClick = () => {
-    setFileInputVisible(true);
-  };
-  const handleFileInputChange = (e) => {
-    const file = e.target.files[0];
-
-    if (file) {
-      setSelectedFile(file);
-
-      // Generate a preview for image files (you can adjust based on your file types)
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setFilePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setFilePreview(null); // Reset preview for non-image files
-      }
-    }
-
-    // Reset file input visibility
-    setFileInputVisible(false);
-  };
-
   const closeFilePreview = () => {
-    setFilePreview(null);
-    setSelectedFile(null);
-    setFileInputVisible(false);
+    setPublicId(null);
+    setRadius(0);
+    setAngle(0);
+    setOverlayText("");
+    setFont("arial");
+    setFontSize(80);
+    setFontWeight("");
+    setFontStyle("");
+    setTextDecoration("");
+    setTextAlignment("center");
+    setTextColor("#000000");
+    setOffsetX(0);
+    setOffsetY(0);
+    setEffect("");
+    setBackgroundRemovalFlag(false);
+    setBackgroundColor("#ffffff");
+  };
+
+  const handleEffectChange = (e) => {
+    setEffect(e.target.value);
+  };
+
+  const handleTextAlignmentChange = (e) => {
+    setTextAlignment(e.target.value);
   };
 
   const handleSendMessage = async () => {
@@ -77,36 +159,51 @@ const ChatRoom = ({ socket }) => {
       return alert(disconnectedAlert);
     }
 
-    const isFile = !!selectedFile;
+    const isFile = !!publicId;
     let messageContent = currentMessage;
     if (isFile) {
-      console.log("selectedFile", selectedFile);
-      try {
-        setUploading(true);
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        const response = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/upload`, ////BACKEND_URL (import.meta.env.VITE_SOME_KEY)
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-        console.log("response", response);
-        messageContent = response.data.data;
-      } catch (error) {
-        alert("Error uploading file");
-        console.error("Error uploading file", error);
-        closeFilePreview();
-      } finally {
-        setUploading(false);
-      }
+      messageContent = cld
+        .image(publicId)
+        .effect(backgroundRemovalFlag ? backgroundRemoval() : "")
+        .backgroundColor(!!backgroundColor ? backgroundColor : "")
+        .overlay(
+          shouldApplyTextOverlay
+            ? source(
+                text(
+                  overlayText,
+                  new TextStyle(font, fontSize > 2 ? fontSize : 2)
+                    .fontWeight(fontWeight)
+                    .fontStyle(fontStyle)
+                    .textDecoration(textDecoration)
+                    .textAlignment(textAlignment)
+                ).textColor(textColor)
+              ).position(
+                new Position()
+                  .gravity(compass(textAlignment))
+                  .offsetX(offsetX)
+                  .offsetY(offsetY)
+              )
+            : ""
+        )
+        .effect(
+          effect === "blackwhite"
+            ? blackwhite()
+            : effect === "Sepia"
+            ? sepia()
+            : effect === "GrayScale"
+            ? grayscale()
+            : blur().strength(1)
+        )
+        .roundCorners(byRadius(radius))
+        .rotate(byAngle(angle))
+        .resize(fill().width(250).height(250))
+        .delivery(quality(autoEco()))
+        .delivery(format(png()))
+        .toURL();
     }
 
     // const messageContent = isFile ? filePreview : currentMessage;
-
+    console.log("messageContent", messageContent);
     const messageData = {
       author,
       isFile,
@@ -124,7 +221,6 @@ const ChatRoom = ({ socket }) => {
           : null,
     };
     console.log("messageData", messageData);
-    // Remove 'file' property from messageData before setting messages
 
     memoizedSocket.emit("send_message", messageData);
     setMessages((prevMessages) => [...prevMessages, messageData]);
@@ -157,6 +253,8 @@ const ChatRoom = ({ socket }) => {
       _id: room._id,
     });
   };
+
+  const shouldApplyTextOverlay = overlayText.trim() !== "";
 
   useEffect(() => {
     // Emit the "checkUserInRoom" event to the server
@@ -339,33 +437,14 @@ const ChatRoom = ({ socket }) => {
                     />
                     <div className="ml-4">
                       <p className="text-grey-darkest">{roomData.roomName}</p>
-                      {/* <p className="text-grey-darker text-xs mt-1">
-                        {users && users.map((user) => user.userName).join(", ")}
-                      </p> */}
                     </div>
                   </div>
                   <div className="flex gap-6">
                     <IoSearch className="h-[28px] w-[28px] cursor-pointer text-gray-500" />
-                    <GrAttachment
-                      className="h-[28px] w-[28px] cursor-pointer text-gray-500"
-                      onClick={handleAttachmentClick}
+                    <CloudinaryUploadWidget
+                      uwConfig={uwConfig}
+                      setPublicId={setPublicId}
                     />
-                    {fileInputVisible && (
-                      <input
-                        type="file"
-                        onChange={handleFileInputChange}
-                        style={{ display: "none" }}
-                        ref={(input) => input && input.click()}
-                      />
-                    )}
-                    {uploading && (
-                      <div
-                        className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-gray-900 bg-opacity-50"
-                        style={{ zIndex: 1000 }}
-                      >
-                        <UploadSpinner />
-                      </div>
-                    )}
 
                     <div className="relative inline-block text-left">
                       <BsThreeDotsVertical
@@ -433,7 +512,6 @@ const ChatRoom = ({ socket }) => {
                       messages.map((message, index) => (
                         <div key={index}>
                           {roomData.roomType === "room" ? (
-                            // If roomType is "room", map all messages where isRoom is true
                             message.isRoom ? (
                               message?.author?.userName === userName ? (
                                 <SendMessage
@@ -451,7 +529,6 @@ const ChatRoom = ({ socket }) => {
                               )
                             ) : null
                           ) : (
-                            // If roomType is not "room", map messages where isRoom is false and author or receiver userName is equal to roomData.roomName
                             !message.isRoom &&
                             (message.author.userName === roomData.roomName ||
                               message.receiver.userName ===
@@ -481,17 +558,293 @@ const ChatRoom = ({ socket }) => {
                         <div>No messages for this room</div>
                       ))}
                   </div>
-                  {filePreview && (
+                  {!!publicId && (
                     <div className="mb-2 py-2 px-3 relative">
                       <GrClose
                         className="h-6 w-6 cursor-pointer absolute top-2 right-2 text-gray-500 hover:text-gray-700"
                         onClick={closeFilePreview}
                       />
-                      <img
-                        src={filePreview}
-                        alt="File Preview"
-                        className="h-48 w-auto rounded-md shadow-lg"
+                      <div className="mb-2">
+                        <label htmlFor="text">Text Content:</label>
+                        <input
+                          type="text"
+                          id="text"
+                          name="text"
+                          value={overlayText}
+                          onChange={(e) => setOverlayText(e.target.value)}
+                        />
+                      </div>
+
+                      {shouldApplyTextOverlay && (
+                        <>
+                          <div className="mb-2">
+                            <label htmlFor="font">Font:</label>
+                            <select
+                              id="font"
+                              name="font"
+                              value={font}
+                              onChange={(e) => setFont(e.target.value)}
+                            >
+                              <option value="arial">Arial</option>
+                              <option value="courier new">Courier New</option>
+                              <option value="georgia">Georgia</option>
+                              <option value="roboto">Roboto</option>
+                              <option value="times new roman">
+                                Times New Roman
+                              </option>
+                            </select>
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="fontSize">Font Size:</label>
+                            <input
+                              type="number"
+                              id="fontSize"
+                              name="fontSize"
+                              value={fontSize}
+                              onChange={(e) =>
+                                setFontSize(Number(e.target.value))
+                              }
+                            />
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="fontWeight">Font Weight:</label>
+                            <select
+                              id="fontWeight"
+                              name="fontWeight"
+                              value={fontWeight}
+                              onChange={(e) => setFontWeight(e.target.value)}
+                            >
+                              <option value="">Normal</option>
+                              <option value="bold">Bold</option>
+                            </select>
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="fontStyle">Font Style:</label>
+                            <select
+                              id="fontStyle"
+                              name="fontStyle"
+                              value={fontStyle}
+                              onChange={(e) => setFontStyle(e.target.value)}
+                            >
+                              <option value="">Normal</option>
+                              <option value="italic">Italic</option>
+                            </select>
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="textDecoration">
+                              Text Decoration:
+                            </label>
+                            <select
+                              id="textDecoration"
+                              name="textDecoration"
+                              value={textDecoration}
+                              onChange={(e) =>
+                                setTextDecoration(e.target.value)
+                              }
+                            >
+                              <option value="">None</option>
+                              <option value="underline">Underline</option>
+                            </select>
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="textAlignment">
+                              Text Alignment:
+                            </label>
+                            <select
+                              id="textAlignment"
+                              name="textAlignment"
+                              value={textAlignment}
+                              onChange={handleTextAlignmentChange}
+                            >
+                              <option value="center">Center</option>
+                              <option value="north">Up</option>
+                              <option value="south">Down</option>
+                              <option value="east">Right</option>
+                              <option value="west">Left</option>
+                              <option value="northeast">Upper Right</option>
+                              <option value="northwest">Upper Left</option>
+                              <option value="southeast">Lower Right</option>
+                              <option value="southwest">Lower Left</option>
+                            </select>
+                          </div>
+
+                          <div className="mb-2">
+                            <label htmlFor="textColor">Text Color:</label>
+                            <input
+                              type="color"
+                              id="textColor"
+                              name="textColor"
+                              value={textColor}
+                              onChange={(e) => setTextColor(e.target.value)}
+                            />
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="offsetX">Offset X:</label>
+                            <input
+                              type="number"
+                              id="offsetX"
+                              name="offsetX"
+                              value={offsetX}
+                              onChange={(e) =>
+                                setOffsetX(Number(e.target.value))
+                              }
+                            />
+                          </div>
+                          <div className="mb-2">
+                            <label htmlFor="offsetY">Offset Y:</label>
+                            <input
+                              type="number"
+                              id="offsetY"
+                              name="offsetY"
+                              value={offsetY}
+                              onChange={(e) =>
+                                setOffsetY(Number(e.target.value))
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
+                      <>
+                        <div className="mb-2">
+                          <label>
+                            <input
+                              type="radio"
+                              value="false"
+                              checked={!backgroundRemovalFlag}
+                              onChange={handleBackgroundRemovalChange}
+                            />
+                            No Background Removal
+                          </label>
+                        </div>
+
+                        <div className="mb-2">
+                          <label>
+                            <input
+                              type="radio"
+                              value="true"
+                              checked={backgroundRemovalFlag}
+                              onChange={handleBackgroundRemovalChange}
+                            />
+                            Background Removal
+                          </label>
+                        </div>
+
+                        {!!backgroundRemovalFlag && (
+                          <div className="mb-2">
+                            <label>
+                              Background Color:
+                              <input
+                                type="color"
+                                value={backgroundColor}
+                                onChange={handleBackgroundColorChange}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </>
+
+                      <div>
+                        <div className="mb-2">
+                          <label>Effect:</label>
+                          <select value={effect} onChange={handleEffectChange}>
+                            <option value="">None</option>
+                            <option value="blackwhite">Black & white</option>
+                            <option value="Sepia">Sepia</option>
+                            <option value="GrayScale">GrayScale</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="mb-2">
+                        <label htmlFor="radius">Radius:</label>
+                        <input
+                          type="range"
+                          id="radius"
+                          name="radius"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={radius}
+                          onChange={handleRadiusChange}
+                        />
+                        <span>{radius}</span>
+                      </div>
+                      <div className="mb-2">
+                        <label htmlFor="angle">Angle:</label>
+                        <input
+                          type="range"
+                          id="angle"
+                          name="angle"
+                          min="0"
+                          max="360"
+                          step="1"
+                          value={angle}
+                          onChange={handleAngleChange}
+                        />
+                        <span>{angle}</span>
+                      </div>
+
+                      <AdvancedImage
+                        style={{
+                          height: "12rem",
+                          width: "auto",
+                        }}
+                        cldImg={cld
+                          .image(publicId)
+                          .effect(
+                            backgroundRemovalFlag ? backgroundRemoval() : ""
+                          )
+                          .backgroundColor(
+                            !!backgroundColor ? backgroundColor : ""
+                          )
+                          .overlay(
+                            shouldApplyTextOverlay
+                              ? source(
+                                  text(
+                                    overlayText,
+                                    new TextStyle(
+                                      font,
+                                      fontSize > 2 ? fontSize : 2
+                                    )
+                                      .fontWeight(fontWeight)
+                                      .fontStyle(fontStyle)
+                                      .textDecoration(textDecoration)
+                                      .textAlignment(textAlignment)
+                                  ).textColor(textColor)
+                                ).position(
+                                  new Position()
+                                    .gravity(compass(textAlignment))
+                                    .offsetX(offsetX)
+                                    .offsetY(offsetY)
+                                )
+                              : ""
+                          )
+                          .effect(
+                            effect === "blackwhite"
+                              ? blackwhite()
+                              : effect === "Sepia"
+                              ? sepia()
+                              : effect === "GrayScale"
+                              ? grayscale()
+                              : blur().strength(1)
+                          )
+                          .roundCorners(byRadius(radius))
+                          .rotate(byAngle(angle))
+                          .delivery(quality(autoEco()))
+                          .delivery(format(png()))}
+                        plugins={[
+                          lazyload({ rootMargin: "0px", threshold: 0.25 }),
+                          responsive({
+                            steps: 200,
+                          }),
+                          placeholder({ mode: "pixelate" }),
+                        ]}
                       />
+                      <button
+                        className="bg-red-500 text-white px-2 py-1 rounded"
+                        onClick={deleteImage}
+                      >
+                        Delete Image
+                      </button>
                     </div>
                   )}
                 </ScrollToBottom>

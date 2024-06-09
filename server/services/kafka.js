@@ -52,7 +52,7 @@ const startMessageConsumer = async () => {
 
       const messageData = JSON.parse(message.value.toString());
       const {
-        roomId,
+        groupId,
         author,
         message: messageContent,
         timeStamp,
@@ -61,7 +61,7 @@ const startMessageConsumer = async () => {
       try {
         await prismaClient.message.create({
           data: {
-            roomId,
+            groupId,
             author,
             message: messageContent,
             timestamp: timeStamp,

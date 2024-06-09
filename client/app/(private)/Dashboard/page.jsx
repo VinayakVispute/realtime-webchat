@@ -1,5 +1,9 @@
-// import ChatRow from "../../../components/Dashboard/ChatRow";
-import ChatRow from "@/components/Dashboard/ChatRow";
+"use client";
+import { useEffect } from "react";
+import ChatRow from "../../../components/Dashboard/ChatRow";
+import { io } from "socket.io-client";
+const socket = io.connect(process.env.NEXT_PUBLIC_API_URL);
+
 const Dashboard = () => {
   const chats = [
     {
@@ -21,6 +25,24 @@ const Dashboard = () => {
     },
     // Add more chat objects here
   ];
+
+  useEffect(() => {
+    const handleConnect = () => {
+      console.log("Connected to server");
+    };
+    const handleSocketError = (data) => {
+      console.error(`Error during ${data.type}: ${data.error}`);
+      alert(data.error);
+    };
+    // Add event listeners
+    socket.on("connect", handleConnect);
+    socket.on("socket_error", handleSocketError);
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("socket_error", handleSocketError);
+    };
+  }, [socket]);
+
   return (
     <section className="bg-gray-50 dark:bg-gray-900 py-3 sm:py-5">
       <div className="px-4 mx-auto max-w-screen-2xl lg:px-12">

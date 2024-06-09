@@ -1,4 +1,4 @@
-const findRoomForUser = (myMap, valueToCheck) => {
+const findGroupForUser = (myMap, valueToCheck) => {
   // Iterate over each key-value pair in the map
   for (const [key, set] of myMap.entries()) {
     // Check if the Set associated with the current key contains the value
@@ -13,4 +13,4 @@ const findRoomForUser = (myMap, valueToCheck) => {
   return null;
 };
 
-module.exports = findRoomForUser;
+module.exports = findGroupForUser;

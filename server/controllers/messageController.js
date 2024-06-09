@@ -1,21 +1,21 @@
 const Message = require("../models/Message");
-const Room = require("../models/Room");
+const Group = require("../models/Group");
 
 const createMessage = async (
   authorId,
   message,
   timeStamp,
-  roomId,
-  isRoom,
+  groupId,
+  isGroup,
   receiverId,
   isFile
 ) => {
   try {
     const newMessage = new Message({
-      isRoom: isRoom,
+      isGroup: isGroup,
       author: authorId,
       receiver: receiverId,
-      room: roomId,
+      group: groupId,
       message: message,
       timestamp: timeStamp,
       isFile: isFile,
@@ -23,13 +23,13 @@ const createMessage = async (
 
     const savedMessage = await newMessage.save();
 
-    // Update Room's messages array
-    await Room.findByIdAndUpdate(roomId, {
+    // Update Group's messages array
+    await Group.findByIdAndUpdate(groupId, {
       $push: { messages: savedMessage._id },
     });
 
     const populatedMessage = await savedMessage.populate(
-      "author receiver room"
+      "author receiver group"
     );
 
     return {

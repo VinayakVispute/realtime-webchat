@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema({
-  isRoom: {
+  isGroup: {
     type: Boolean,
     default: true,
   },
@@ -15,10 +15,10 @@ const messageSchema = new mongoose.Schema({
     ref: "User",
     required: false,
   },
-  room: {
+  group: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Room",
-    required: [true, "Room is required"],
+    ref: "Group",
+    required: [true, "Group is required"],
   },
   isFile: {
     type: Boolean,

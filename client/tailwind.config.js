@@ -10,7 +10,7 @@ module.exports = {
     "./components/**/*.{js,jsx}",
     "./app/**/*.{js,jsx}",
     "./src/**/*.{js,jsx}",
-    "./assets/svg/**/*.{svg}",
+    "./assets/svg/**/*.svg",
   ],
 
   theme: {},

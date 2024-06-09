@@ -1,6 +1,6 @@
-const checkUserInRoom = (myMap, key, valueToCheck) => {
+const checkUserInGroup = (myMap, key, valueToCheck) => {
   const setForKey = myMap.get(key);
   return setForKey ? setForKey.has(valueToCheck) : false;
 };
 
-module.exports = checkUserInRoom;
+module.exports = checkUserInGroup;

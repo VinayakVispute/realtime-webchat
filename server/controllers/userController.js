@@ -1,6 +1,7 @@
 const User = require("../models/User");
-const Room = require("../models/Room");
-const addUserToRoom = async (roomId, userName, socketId) => {
+const Group = require("../models/Group");
+
+const addUserToGroup = async (groupId, userName, socketId) => {
   try {
     const existingUser = await User.findOneAndUpdate(
       { userName },
@@ -10,24 +11,36 @@ const addUserToRoom = async (roomId, userName, socketId) => {
         new: true,
       }
     );
-    // find room exist or not
-    const room = await Room.findOne({ roomId: roomId });
-    if (!room) {
+    console.log("existingUser", existingUser);
+    // Find group by groupId
+    const group = await Group.findOne({ groupId });
+    if (!group) {
       return {
         success: false,
-        message: "Room not found",
+        message: "Group not found",
       };
     }
-    // check if user is already in the room
+
+    // Check if user is already a member of the group, if not, add to members
     if (
-      !room.onlineUsers.some(
+      !group.members.some(
         (user) => user._id.toString() === existingUser._id.toString()
       )
     ) {
-      room.onlineUsers.push(existingUser._id);
+      group.members.push(existingUser._id);
     }
-    const updatedRoom = await room.save();
-    const roomData = await updatedRoom.populate([
+
+    // Check if user is already online in the group, if not, add to onlineUsers
+    if (
+      !group.onlineUsers.some(
+        (user) => user._id.toString() === existingUser._id.toString()
+      )
+    ) {
+      group.onlineUsers.push(existingUser._id);
+    }
+
+    const updatedGroup = await group.save();
+    const groupData = await updatedGroup.populate([
       {
         path: "onlineUsers",
       },
@@ -38,8 +51,8 @@ const addUserToRoom = async (roomId, userName, socketId) => {
             path: "author",
           },
           {
-            path: "room",
-            select: "roomId roomName",
+            path: "group",
+            select: "groupId groupName",
           },
           {
             path: "receiver",
@@ -50,16 +63,16 @@ const addUserToRoom = async (roomId, userName, socketId) => {
 
     return {
       success: true,
-      message: "User added to the room",
+      message: "User added to the group",
       data: {
-        room: {
-          _id: roomData._id,
-          roomId: roomData.roomId,
-          roomName: roomData.roomName,
+        group: {
+          _id: groupData._id,
+          groupId: groupData.groupId,
+          groupName: groupData.groupName,
         },
         author: existingUser,
-        roomData: roomData?.onlineUsers,
-        messages: roomData?.messages,
+        groupData: groupData.onlineUsers,
+        messages: groupData.messages,
       },
     };
   } catch (error) {
@@ -72,5 +85,5 @@ const addUserToRoom = async (roomId, userName, socketId) => {
 };
 
 module.exports = {
-  addUserToRoom,
+  addUserToGroup,
 };

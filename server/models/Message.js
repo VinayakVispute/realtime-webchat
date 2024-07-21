@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const messageSchema = new mongoose.Schema({
   isGroup: {
     type: Boolean,
-    default: true,
+    required: true,
   },
   author: {
     type: mongoose.Schema.Types.ObjectId,
@@ -14,6 +14,7 @@ const messageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: false,
+    default: null,
   },
   group: {
     type: mongoose.Schema.Types.ObjectId,

@@ -1,46 +1,46 @@
 const Message = require("../models/Message");
 const Group = require("../models/Group");
 
-const createMessage = async (
+const createMessage = async ({
   authorId,
   message,
-  timeStamp,
+  timestamp,
   groupId,
   isGroup,
   receiverId,
-  isFile
-) => {
+  isFile,
+}) => {
   try {
     const newMessage = new Message({
-      isGroup: isGroup,
       author: authorId,
-      receiver: receiverId,
+      message,
+      timestamp,
       group: groupId,
-      message: message,
-      timestamp: timeStamp,
-      isFile: isFile,
+      isGroup,
+      receiver: receiverId,
+      isFile,
     });
-
     const savedMessage = await newMessage.save();
 
-    // Update Group's messages array
     await Group.findByIdAndUpdate(groupId, {
-      $push: { messages: savedMessage._id },
+      $push: { messages: newMessage._id },
     });
-
-    const populatedMessage = await savedMessage.populate(
+    //TODO: use select for author and receiver and group for getting only required fields
+    const populateMessage = await savedMessage.populate(
       "author receiver group"
     );
 
     return {
       success: true,
       message: "Message created successfully",
-      data: populatedMessage,
+      data: populateMessage,
     };
   } catch (error) {
+    console.log("Error in createMesaage:", error);
     return {
       success: false,
-      message: error.message,
+      message: "Error in creating message",
+      data: null,
     };
   }
 };

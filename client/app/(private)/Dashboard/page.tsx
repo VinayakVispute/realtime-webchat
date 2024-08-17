@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const user = await currentUser();
-  const mongoDbId: string = user?.privateMetadata?.mongoDbId;
+  const mongoDbId: string = user?.privateMetadata?.mongoDbId as string;
 
   const response = await getAllGroupsList({ userId: mongoDbId });
   if (!response.success) {

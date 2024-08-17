@@ -166,7 +166,10 @@ export async function getAllGroupsList(
     };
   } catch (error) {
     console.error(error);
-    return false;
+    return {
+      success: false,
+      message: error.message,
+    };
   }
 }
 

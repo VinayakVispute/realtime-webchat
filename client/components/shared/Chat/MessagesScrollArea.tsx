@@ -22,6 +22,7 @@ const MessagesScrollArea = () => {
                       message={message.message}
                       timestamp={message.timestamp}
                       name={author?.name?.toString() ?? ""}
+                      isFile={message.isFile}
                     />
                   );
                 } else {
@@ -30,7 +31,7 @@ const MessagesScrollArea = () => {
                       key={index}
                       message={message.message}
                       timestamp={message.timestamp}
-                      sender={message.author?.userName?.toString()}
+                      name={message.author?.userName?.toString()}
                       isFile={message.isFile}
                     />
                   );
@@ -49,6 +50,7 @@ const MessagesScrollArea = () => {
                       message={message.message}
                       timestamp={message.timestamp}
                       name={author?.name?.toString() ?? ""}
+                      isFile={message.isFile}
                     />
                   );
                 } else {
@@ -57,7 +59,7 @@ const MessagesScrollArea = () => {
                       key={index}
                       message={message.message}
                       timestamp={message.timestamp}
-                      sender={message.author?.userName?.toString()}
+                      name={message.author?.userName?.toString()}
                       isFile={message.isFile}
                     />
                   );

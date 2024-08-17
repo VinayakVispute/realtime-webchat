@@ -92,14 +92,16 @@ export interface ChatStateInterface {
   groupDetails: Partial<IGroup>;
   messages: IMessage[] | [];
   onlineUsers: Partial<IUser>[] | [];
+  //TODO: Check if this is the correct type
   currentActiveUser: Partial<IGroup> & {
     groupType?: string;
+    _id?: string;
   };
 }
 
 export interface MessageParamsInterface {
   message: string;
-  sender: string;
+  name: string;
   timestamp: Date;
   isFile: boolean;
 }
@@ -124,4 +126,10 @@ export interface ChatState {
 
 export interface handleRemoveGroupParamsInterface {
   groupId: string;
+}
+
+export interface actionsResponseInterface {
+  success: boolean;
+  message: string;
+  data?: any;
 }

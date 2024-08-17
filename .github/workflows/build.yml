@@ -15,13 +15,8 @@ jobs:
         with:
           node-version: "20"
 
-
-
-      - name: cd client
-        run: cd client
-
       - name: Install Dependencies
-        run: npm install
+        run: cd client && npm install
 
       - name: Run Build
         run: npm run build

@@ -3,7 +3,7 @@ name: Build Succeeds on PR
 on:
   pull_request:
     branches:
-      - master
+      - NextJs-Migration
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
           node-version: "20"
 
       - name: Checkout Branch
-        run: git checkout NextJs-Migration
+        run: git checkout NextJs-Migration && cd client
 
       - name: Install Dependencies
         run: npm install

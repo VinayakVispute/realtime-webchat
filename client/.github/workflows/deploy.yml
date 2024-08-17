@@ -19,7 +19,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Checkout Branch
-        run: git checkout NextJs-Migration
+        run: git checkout NextJs-Migration && cd client
 
       - name: Build and Push Docker image
         uses: docker/build-push-action@v2

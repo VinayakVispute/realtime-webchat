@@ -15,11 +15,10 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Checkout Branch
-        run: git branch
 
-      - name: Checkout Branch
-        run: git checkout NextJs-Migration && cd client
+
+      - name: cd client
+        run: cd client
 
       - name: Install Dependencies
         run: npm install

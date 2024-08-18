@@ -43,4 +43,4 @@ jobs:
             sudo docker pull vinayakvispute/vinayakvispute-devcollub_hub-client:latest
             sudo docker stop web-app || true
             sudo docker rm web-app || true
-            sudo docker run -d --name web-app -p 3005:3000 vinayakvispute/vinayakvispute-devcollub_hub-client:latest
+            sudo docker run -d --name web-app --env-file .env -p 3005:3000 vinayakvispute/vinayakvispute-devcollub_hub-client:latest
